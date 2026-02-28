@@ -65,9 +65,13 @@ builder.Services.Configure<EodhdSettings>(
 builder.Services.AddScoped<IMarketDataService, EodhdMarketDataService>();
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
+var allowedOrigins = builder.Configuration
+    .GetSection("AllowedOrigins").Get<string[]>()
+    ?? ["http://localhost:3000"];
+
 builder.Services.AddCors(opts =>
     opts.AddPolicy("Frontend", policy =>
-        policy.WithOrigins("http://localhost:3000")
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod()));
 
@@ -105,6 +109,13 @@ builder.Services.AddSwaggerGen(opts =>
 });
 
 var app = builder.Build();
+
+// Auto-apply EF Core migrations on startup (safe — idempotent)
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ShareTrackerDbContext>();
+    db.Database.Migrate();
+}
 
 app.UseSwagger();
 app.UseSwaggerUI();
