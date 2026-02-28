@@ -1,0 +1,11 @@
+/Users/ben/Documents/ShareTracker/src/ShareTracker.Domain/bin/Debug/net9.0/ShareTracker.Domain.deps.json
+/Users/ben/Documents/ShareTracker/src/ShareTracker.Domain/bin/Debug/net9.0/ShareTracker.Domain.dll
+/Users/ben/Documents/ShareTracker/src/ShareTracker.Domain/bin/Debug/net9.0/ShareTracker.Domain.pdb
+/Users/ben/Documents/ShareTracker/src/ShareTracker.Domain/obj/Debug/net9.0/ShareTracker.Domain.GeneratedMSBuildEditorConfig.editorconfig
+/Users/ben/Documents/ShareTracker/src/ShareTracker.Domain/obj/Debug/net9.0/ShareTracker.Domain.AssemblyInfoInputs.cache
+/Users/ben/Documents/ShareTracker/src/ShareTracker.Domain/obj/Debug/net9.0/ShareTracker.Domain.AssemblyInfo.cs
+/Users/ben/Documents/ShareTracker/src/ShareTracker.Domain/obj/Debug/net9.0/ShareTracker.Domain.csproj.CoreCompileInputs.cache
+/Users/ben/Documents/ShareTracker/src/ShareTracker.Domain/obj/Debug/net9.0/ShareTracker.Domain.dll
+/Users/ben/Documents/ShareTracker/src/ShareTracker.Domain/obj/Debug/net9.0/refint/ShareTracker.Domain.dll
+/Users/ben/Documents/ShareTracker/src/ShareTracker.Domain/obj/Debug/net9.0/ShareTracker.Domain.pdb
+/Users/ben/Documents/ShareTracker/src/ShareTracker.Domain/obj/Debug/net9.0/ref/ShareTracker.Domain.dll

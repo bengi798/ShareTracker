@@ -1,0 +1,38 @@
+using ShareTracker.Domain.Entities;
+
+namespace ShareTracker.Application.Trades.DTOs;
+
+public record PropertyTradeDto(
+    Guid Id,
+    decimal PricePerUnit,
+    decimal NumberOfUnits,
+    decimal? NumberOfUnitsSold,
+    decimal TotalValue,
+    string TradeType,
+    DateOnly DateOfTrade,
+    DateTime CreatedAt,
+    string Address,
+    string PropertyType,
+    string Currency,
+    bool IsForeignTrade,
+    bool ExchangeRateApplied,
+    decimal? ExchangeRate)
+    : TradeDto(Id, PricePerUnit, NumberOfUnits, NumberOfUnitsSold, TotalValue, TradeType, DateOfTrade, CreatedAt, Currency, IsForeignTrade, ExchangeRateApplied, ExchangeRate)
+{
+    public static PropertyTradeDto FromDomain(PropertyTrade trade) => new(
+        trade.Id,
+        trade.PricePerUnit,
+        trade.NumberOfUnits,
+        trade.NumberOfUnitsSold,
+        trade.TotalValue,
+        trade.TradeType.ToString(),
+        trade.DateOfTrade,
+        trade.CreatedAt,
+        trade.Address,
+        trade.PropertyType.ToString(),
+        trade.Currency.ToString(),
+        trade.IsForeignTrade,
+        trade.ExchangeRateApplied,
+        trade.ExchangeRate
+    );
+}
