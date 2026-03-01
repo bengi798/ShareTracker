@@ -30,9 +30,10 @@ function tradeDescription(trade: Trade): string {
 interface TradeRowProps {
   trade: Trade;
   onDelete: (id: string) => Promise<void>;
+  onEdit: (trade: Trade) => void;
 }
 
-export function TradeRow({ trade, onDelete }: TradeRowProps) {
+export function TradeRow({ trade, onDelete, onEdit }: TradeRowProps) {
   const [deleting, setDeleting] = useState(false);
 
   const handleDelete = async () => {
@@ -69,9 +70,14 @@ export function TradeRow({ trade, onDelete }: TradeRowProps) {
       </td>
       <td className="px-4 py-3 text-gray-500">{trade.dateOfTrade}</td>
       <td className="px-4 py-3 text-right">
-        <Button variant="danger" isLoading={deleting} onClick={handleDelete} className="text-xs px-2 py-1">
-          Delete
-        </Button>
+        <div className="flex items-center justify-end gap-2">
+          <Button variant="ghost" onClick={() => onEdit(trade)} className="text-xs px-2 py-1">
+            Edit
+          </Button>
+          <Button variant="danger" isLoading={deleting} onClick={handleDelete} className="text-xs px-2 py-1">
+            Delete
+          </Button>
+        </div>
       </td>
     </tr>
   );

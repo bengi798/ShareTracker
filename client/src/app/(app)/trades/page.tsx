@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 
 export default function TradesPage() {
-  const { trades, loading, error, removeTrade } = useTrades();
+  const { trades, loading, error, removeTrade, updateTrade } = useTrades();
 
   return (
     <div>
@@ -29,7 +29,7 @@ export default function TradesPage() {
       )}
 
       {!loading && !error && (
-        <TradeTable trades={trades} onDelete={removeTrade} />
+        <TradeTable trades={trades} onDelete={removeTrade} onUpdate={updateTrade} />
       )}
     </div>
   );

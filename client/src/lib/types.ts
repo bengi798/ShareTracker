@@ -105,6 +105,45 @@ export interface CreatePropertyPayload extends CreateBase {
   propertyType: PropertyType;
 }
 
+// ── Update payloads (same as Create but without tradeType) ───────────
+interface UpdateBase {
+  pricePerUnit: number;
+  numberOfUnits: number;
+  dateOfTrade: string;
+  currency: string;
+  isForeignTrade: boolean;
+  exchangeRate: number | null;
+}
+
+export interface UpdateSharesPayload extends UpdateBase {
+  ticker: string;
+  exchange: Exchange;
+  brokerageFees?: number | null;
+}
+
+export interface UpdateGoldPayload extends UpdateBase {
+  purityCarats: number;
+  weightUnit: WeightUnit;
+}
+
+export interface UpdateCryptoPayload extends UpdateBase {
+  coinSymbol: string;
+  network?: string;
+  brokerageFees?: number | null;
+}
+
+export interface UpdateBondPayload extends UpdateBase {
+  bondCode: string;
+  yieldPercent: number;
+  maturityDate: string;
+  issuer: string;
+}
+
+export interface UpdatePropertyPayload extends UpdateBase {
+  address: string;
+  propertyType: PropertyType;
+}
+
 // ── Market data (discriminated union, mirrors Trade pattern) ──────────
 // Shared fields — not exported; use Quote instead
 interface QuoteBase {

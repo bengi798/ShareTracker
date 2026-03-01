@@ -33,5 +33,9 @@ export function useTrades() {
     setTrades(prev => prev.filter(t => t.id !== id));
   }, [token]);
 
-  return { trades, loading, error, refetch: fetchTrades, removeTrade };
+  const updateTrade = useCallback((updated: Trade) => {
+    setTrades(prev => prev.map(t => t.id === updated.id ? updated : t));
+  }, []);
+
+  return { trades, loading, error, refetch: fetchTrades, removeTrade, updateTrade };
 }
