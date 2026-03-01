@@ -10,7 +10,10 @@ public record ReportRow(
     decimal? CostBasis,
     decimal? GrossGainLoss,
     decimal? TaxableGain,
-    bool CgtDiscountApplied);
+    bool CgtDiscountApplied,
+    bool IsSplit,
+    decimal? SplitDiscountedTaxable,
+    decimal? SplitNonDiscountedTaxable);
 
 public record ReportData(
     int FinancialYear,

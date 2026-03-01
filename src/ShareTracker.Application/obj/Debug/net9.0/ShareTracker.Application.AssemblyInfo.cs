@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ShareTracker.Application")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+bc1c80a8f5312531b802938e36329b150569f0cc")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+69221faff3662905a06c69cbe7a8bc39e93d4774")]
 [assembly: System.Reflection.AssemblyProductAttribute("ShareTracker.Application")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ShareTracker.Application")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

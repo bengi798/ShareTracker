@@ -48,43 +48,49 @@ public class GenerateReportQueryHandler
         decimal netTaxableGain = 0;
         bool anyDiscount = false;
 
+        // FIFO sell metrics across all FYs so lot pools carry over correctly
+        var allSellMetrics = ComputeAllSellMetrics(audTrades);
+
         foreach (var trade in fyTrades)
         {
-            if (trade.TradeType == TradeType.Sell)
+            if (trade.TradeType == TradeType.Sell && allSellMetrics.TryGetValue(trade.Id, out var m))
             {
-                var (costBasis, proceeds, gainLoss, cgtDiscount, taxableGain) =
-                    ComputeSellMetrics(trade, audTrades);
-
-                totalProceeds  += proceeds;
-                totalCostBasis += costBasis;
-                netTaxableGain += taxableGain;
-                if (cgtDiscount) anyDiscount = true;
+                totalProceeds  += m.Proceeds;
+                totalCostBasis += m.CostBasis;
+                netTaxableGain += m.TaxableGain;
+                if (m.CgtDiscountApplies) anyDiscount = true;
 
                 rows.Add(new ReportRow(
-                    Date:              trade.DateOfTrade,
-                    TradeType:         "Sell",
-                    Description:       GetDescription(trade),
-                    Units:             trade.NumberOfUnits,
-                    PricePerUnit:      trade.PricePerUnit,
-                    TotalValue:        trade.TotalValue,
-                    CostBasis:         costBasis,
-                    GrossGainLoss:     gainLoss,
-                    TaxableGain:       taxableGain,
-                    CgtDiscountApplied: cgtDiscount));
+                    Date:                      trade.DateOfTrade,
+                    TradeType:                 "Sell",
+                    Description:               GetDescription(trade),
+                    Units:                     trade.NumberOfUnits,
+                    PricePerUnit:              trade.PricePerUnit,
+                    TotalValue:                trade.TotalValue,
+                    CostBasis:                 m.CostBasis,
+                    GrossGainLoss:             m.GainLoss,
+                    TaxableGain:               m.TaxableGain,
+                    CgtDiscountApplied:        m.CgtDiscountApplies,
+                    IsSplit:                   m.IsSplit,
+                    SplitDiscountedTaxable:    m.IsSplit ? m.SplitDiscountedTaxable : null,
+                    SplitNonDiscountedTaxable: m.IsSplit ? m.SplitNonDiscountedTaxable : null));
             }
             else
             {
                 rows.Add(new ReportRow(
-                    Date:              trade.DateOfTrade,
-                    TradeType:         "Buy",
-                    Description:       GetDescription(trade),
-                    Units:             trade.NumberOfUnits,
-                    PricePerUnit:      trade.PricePerUnit,
-                    TotalValue:        trade.TotalValue,
-                    CostBasis:         null,
-                    GrossGainLoss:     null,
-                    TaxableGain:       null,
-                    CgtDiscountApplied: false));
+                    Date:                      trade.DateOfTrade,
+                    TradeType:                 "Buy",
+                    Description:               GetDescription(trade),
+                    Units:                     trade.NumberOfUnits,
+                    PricePerUnit:              trade.PricePerUnit,
+                    TotalValue:                trade.TotalValue,
+                    CostBasis:                 null,
+                    GrossGainLoss:             null,
+                    TaxableGain:               null,
+                    CgtDiscountApplied:        false,
+                    IsSplit:                   false,
+                    SplitDiscountedTaxable:    null,
+                    SplitNonDiscountedTaxable: null));
             }
         }
 
@@ -113,50 +119,112 @@ public class GenerateReportQueryHandler
         }
     }
 
-    // ── CGT calculation (mirrors frontend ReportsView.tsx logic) ─────────────
+    // ── CGT calculation — FIFO lot-based (mirrors frontend ReportsView.tsx logic) ──
 
-    private static (decimal CostBasis, decimal Proceeds, decimal GainLoss, bool CgtDiscount, decimal TaxableGain)
-        ComputeSellMetrics(Trade sell, IReadOnlyList<Trade> audTrades)
+    private sealed class BuyLot
     {
-        var key = AssetKey(sell);
+        public required DateOnly Date        { get; init; }
+        public required decimal  CostPerUnit { get; init; }
+        public          decimal  Remaining   { get; set; }
+    }
 
-        // Collect all same-asset buy trades up to and including this sell, ordered by date/created
-        var history = audTrades
-            .Where(t => AssetKey(t) == key)
-            .OrderBy(t => t.DateOfTrade)
-            .ThenBy(t => t.CreatedAt)
-            .ToList();
+    private sealed record SellResult(
+        decimal CostBasis,
+        decimal Proceeds,
+        decimal GainLoss,
+        bool    CgtDiscountApplies,
+        decimal TaxableGain,
+        bool    IsSplit,
+        decimal SplitDiscountedTaxable,
+        decimal SplitNonDiscountedTaxable);
 
-        decimal sumBuyUnits = 0;
-        decimal sumBuyValue = 0;
-        DateOnly? earliestBuyDate = null;
+    // Processes all AUD trades using FIFO lot tracking so that when a sale spans
+    // buy lots with different holding periods, the 50% CGT discount is applied
+    // only to the portion held for more than 12 months.
+    private static Dictionary<Guid, SellResult> ComputeAllSellMetrics(IReadOnlyList<Trade> audTrades)
+    {
+        var byAsset = audTrades
+            .GroupBy(AssetKey)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderBy(t => t.DateOfTrade).ThenBy(t => t.CreatedAt).ToList());
 
-        foreach (var t in history)
+        var result = new Dictionary<Guid, SellResult>();
+
+        foreach (var trades in byAsset.Values)
         {
-            if (t.TradeType == TradeType.Buy)
+            var lots = new List<BuyLot>();
+
+            foreach (var trade in trades)
             {
-                earliestBuyDate ??= t.DateOfTrade;
-                sumBuyUnits += t.NumberOfUnits;
-                sumBuyValue += t.PricePerUnit * t.NumberOfUnits + GetBrokerageFees(t);
+                if (trade.TradeType == TradeType.Buy)
+                {
+                    var brokerage = GetBrokerageFees(trade);
+                    var totalCost = trade.PricePerUnit * trade.NumberOfUnits + brokerage;
+                    lots.Add(new BuyLot
+                    {
+                        Date        = trade.DateOfTrade,
+                        CostPerUnit = trade.NumberOfUnits > 0 ? totalCost / trade.NumberOfUnits : 0m,
+                        Remaining   = trade.NumberOfUnits,
+                    });
+                }
+                else if (trade.TradeType == TradeType.Sell)
+                {
+                    var sellBrokerage   = GetBrokerageFees(trade);
+                    var totalProceeds   = trade.PricePerUnit * trade.NumberOfUnits - sellBrokerage;
+                    var proceedsPerUnit = trade.NumberOfUnits > 0 ? totalProceeds / trade.NumberOfUnits : 0m;
+                    var sellDate        = trade.DateOfTrade;
+
+                    decimal unitsToSell          = trade.NumberOfUnits;
+                    decimal totalCostBasis        = 0;
+                    decimal discountedTaxable     = 0;
+                    decimal nonDiscountedTaxable  = 0;
+                    bool    anyDiscount           = false;
+                    bool    anyNonDiscount        = false;
+
+                    foreach (var lot in lots)
+                    {
+                        if (unitsToSell <= 0) break;
+                        if (lot.Remaining == 0) continue;
+
+                        var unitsFromLot = Math.Min(lot.Remaining, unitsToSell);
+                        lot.Remaining -= unitsFromLot;
+                        unitsToSell   -= unitsFromLot;
+
+                        var lotCostBasis = lot.CostPerUnit * unitsFromLot;
+                        var lotProceeds  = proceedsPerUnit * unitsFromLot;
+                        var lotGain      = lotProceeds - lotCostBasis;
+                        totalCostBasis  += lotCostBasis;
+
+                        var oneYearAfterBuy = lot.Date.AddYears(1);
+                        var discountApplies = lotGain > 0 && sellDate > oneYearAfterBuy;
+
+                        if (discountApplies)
+                        {
+                            anyDiscount        = true;
+                            discountedTaxable += lotGain * 0.5m;
+                        }
+                        else
+                        {
+                            anyNonDiscount       = true;
+                            nonDiscountedTaxable += lotGain;
+                        }
+                    }
+
+                    result[trade.Id] = new SellResult(
+                        CostBasis:                totalCostBasis,
+                        Proceeds:                 totalProceeds,
+                        GainLoss:                 totalProceeds - totalCostBasis,
+                        CgtDiscountApplies:       anyDiscount,
+                        TaxableGain:              discountedTaxable + nonDiscountedTaxable,
+                        IsSplit:                  anyDiscount && anyNonDiscount,
+                        SplitDiscountedTaxable:   discountedTaxable,
+                        SplitNonDiscountedTaxable: nonDiscountedTaxable);
+                }
             }
-            if (t.Id == sell.Id) break;
         }
 
-        var avgCost   = sumBuyUnits > 0 ? sumBuyValue / sumBuyUnits : 0m;
-        var costBasis = avgCost * sell.NumberOfUnits;
-        var proceeds  = sell.PricePerUnit * sell.NumberOfUnits - GetBrokerageFees(sell);
-        var gainLoss  = proceeds - costBasis;
-
-        // Australian 50% CGT discount: positive gain held > 12 months
-        bool cgtDiscount = false;
-        if (gainLoss > 0 && earliestBuyDate.HasValue)
-        {
-            var oneYearAfterBuy = earliestBuyDate.Value.AddYears(1);
-            cgtDiscount = sell.DateOfTrade > oneYearAfterBuy;
-        }
-
-        var taxableGain = cgtDiscount ? gainLoss * 0.5m : gainLoss;
-        return (costBasis, proceeds, gainLoss, cgtDiscount, taxableGain);
+        return result;
     }
 
     private static string AssetKey(Trade trade) => trade switch

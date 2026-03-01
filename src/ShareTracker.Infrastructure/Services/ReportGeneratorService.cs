@@ -124,10 +124,27 @@ public class ReportGeneratorService : IReportGeneratorService
                                 row.GrossGainLoss.HasValue ? FmtGain(row.GrossGainLoss.Value) : "—",
                                 bg, right: true,
                                 color: row.GrossGainLoss.HasValue ? GainColor(row.GrossGainLoss.Value) : Colors.Grey.Medium);
-                            DataCell(table,
-                                row.TaxableGain.HasValue ? FmtGain(row.TaxableGain.Value) : "—",
-                                bg, right: true,
-                                color: row.TaxableGain.HasValue ? GainColor(row.TaxableGain.Value) : Colors.Grey.Medium);
+                            // Taxable Gain — multi-line when the sale spans lots with different holding periods
+                            if (row.IsSplit && row.TaxableGain.HasValue
+                                && row.SplitDiscountedTaxable.HasValue
+                                && row.SplitNonDiscountedTaxable.HasValue)
+                            {
+                                table.Cell().Background(bg).Padding(4).AlignRight().Column(col =>
+                                {
+                                    col.Item().Text(FmtGain(row.TaxableGain.Value))
+                                        .FontColor(GainColor(row.TaxableGain.Value)).FontSize(9);
+                                    col.Item()
+                                        .Text($"{FmtGain(row.SplitDiscountedTaxable.Value)} disc. + {FmtGain(row.SplitNonDiscountedTaxable.Value)} full")
+                                        .FontSize(7).FontColor(Colors.Amber.Darken2);
+                                });
+                            }
+                            else
+                            {
+                                DataCell(table,
+                                    row.TaxableGain.HasValue ? FmtGain(row.TaxableGain.Value) : "—",
+                                    bg, right: true,
+                                    color: row.TaxableGain.HasValue ? GainColor(row.TaxableGain.Value) : Colors.Grey.Medium);
+                            }
                         }
                     });
                 });
@@ -173,7 +190,9 @@ public class ReportGeneratorService : IReportGeneratorService
             csv.WriteField(row.CostBasis.HasValue ? (object)row.CostBasis.Value : "");
             csv.WriteField(row.GrossGainLoss.HasValue ? (object)row.GrossGainLoss.Value : "");
             csv.WriteField(row.TaxableGain.HasValue ? (object)row.TaxableGain.Value : "");
-            csv.WriteField(row.CgtDiscountApplied ? "Yes" : "");
+            csv.WriteField(row.CgtDiscountApplied
+                ? (row.IsSplit ? "Partial" : "Yes")
+                : "");
             csv.NextRecord();
         }
 
