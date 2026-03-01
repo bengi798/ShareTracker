@@ -1,9 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "t+OxaXECvUo=",
+  "dgSpecHash": "oLGbCxP8PHY=",
   "success": true,
-  "projectFilePath": "/Users/ben/Documents/ShareTracker/src/ShareTracker.Infrastructure/ShareTracker.Infrastructure.csproj",
+  "projectFilePath": "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.Infrastructure/ShareTracker.Infrastructure.csproj",
   "expectedPackageFiles": [
+    "/Users/ben/.nuget/packages/csvhelper/33.1.0/csvhelper.33.1.0.nupkg.sha512",
     "/Users/ben/.nuget/packages/fluentvalidation/11.12.0/fluentvalidation.11.12.0.nupkg.sha512",
     "/Users/ben/.nuget/packages/fluentvalidation.dependencyinjectionextensions/11.12.0/fluentvalidation.dependencyinjectionextensions.11.12.0.nupkg.sha512",
     "/Users/ben/.nuget/packages/humanizer.core/2.14.1/humanizer.core.2.14.1.nupkg.sha512",
@@ -46,6 +47,7 @@
     "/Users/ben/.nuget/packages/mono.texttemplating/2.2.1/mono.texttemplating.2.2.1.nupkg.sha512",
     "/Users/ben/.nuget/packages/npgsql/8.0.6/npgsql.8.0.6.nupkg.sha512",
     "/Users/ben/.nuget/packages/npgsql.entityframeworkcore.postgresql/8.0.11/npgsql.entityframeworkcore.postgresql.8.0.11.nupkg.sha512",
+    "/Users/ben/.nuget/packages/questpdf/2026.2.2/questpdf.2026.2.2.nupkg.sha512",
     "/Users/ben/.nuget/packages/system.codedom/4.4.0/system.codedom.4.4.0.nupkg.sha512",
     "/Users/ben/.nuget/packages/system.collections.immutable/6.0.0/system.collections.immutable.6.0.0.nupkg.sha512",
     "/Users/ben/.nuget/packages/system.composition/6.0.0/system.composition.6.0.0.nupkg.sha512",

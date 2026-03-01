@@ -964,11 +964,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/ben/Documents/ShareTracker/tests/ShareTracker.Domain.Tests/ShareTracker.Domain.Tests.csproj",
+      "projectUniqueName": "/Users/ben/Documents/GitHub/ShareTracker/tests/ShareTracker.Domain.Tests/ShareTracker.Domain.Tests.csproj",
       "projectName": "ShareTracker.Domain.Tests",
-      "projectPath": "/Users/ben/Documents/ShareTracker/tests/ShareTracker.Domain.Tests/ShareTracker.Domain.Tests.csproj",
+      "projectPath": "/Users/ben/Documents/GitHub/ShareTracker/tests/ShareTracker.Domain.Tests/ShareTracker.Domain.Tests.csproj",
       "packagesPath": "/Users/ben/.nuget/packages/",
-      "outputPath": "/Users/ben/Documents/ShareTracker/tests/ShareTracker.Domain.Tests/obj/",
+      "outputPath": "/Users/ben/Documents/GitHub/ShareTracker/tests/ShareTracker.Domain.Tests/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "/Users/ben/.nuget/NuGet/NuGet.Config"
@@ -983,8 +983,8 @@
         "net9.0": {
           "targetAlias": "net9.0",
           "projectReferences": {
-            "/Users/ben/Documents/ShareTracker/src/ShareTracker.Domain/ShareTracker.Domain.csproj": {
-              "projectPath": "/Users/ben/Documents/ShareTracker/src/ShareTracker.Domain/ShareTracker.Domain.csproj"
+            "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.Domain/ShareTracker.Domain.csproj": {
+              "projectPath": "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.Domain/ShareTracker.Domain.csproj"
             }
           }
         }

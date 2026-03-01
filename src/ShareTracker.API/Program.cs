@@ -4,14 +4,19 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using QuestPDF.Infrastructure;
 using ShareTracker.Application;
 using ShareTracker.Application.Common.Behaviors;
 using ShareTracker.Application.Common.Interfaces;
+using ShareTracker.Application.Reports;
 using ShareTracker.Domain.Interfaces.Repositories;
 using ShareTracker.Infrastructure.Persistence;
 using ShareTracker.Infrastructure.Persistence.Repositories;
 using ShareTracker.Infrastructure.Services;
 using ShareTracker.API.Middleware;
+
+// QuestPDF community licence (free for projects up to $1M revenue)
+QuestPDF.Settings.License = LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -68,6 +73,7 @@ builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<IReportGeneratorService, ReportGeneratorService>();
 
 // ── Infrastructure: Market data (EODHD) ──────────────────────────────────────
 builder.Services.AddMemoryCache();

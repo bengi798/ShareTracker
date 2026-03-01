@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "50jOCLGTBfQ=",
+  "dgSpecHash": "uRbK6LvW1+4=",
   "success": true,
-  "projectFilePath": "/Users/ben/Documents/ShareTracker/src/ShareTracker.Application/ShareTracker.Application.csproj",
+  "projectFilePath": "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.Application/ShareTracker.Application.csproj",
   "expectedPackageFiles": [
     "/Users/ben/.nuget/packages/fluentvalidation/11.12.0/fluentvalidation.11.12.0.nupkg.sha512",
     "/Users/ben/.nuget/packages/fluentvalidation.dependencyinjectionextensions/11.12.0/fluentvalidation.dependencyinjectionextensions.11.12.0.nupkg.sha512",

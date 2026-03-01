@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import type { Trade, SharesTrade, GoldTrade, CryptoTrade, BondTrade, PropertyTrade } from '@/lib/types';
+import { useAuth } from '@/lib/auth/AuthContext';
+import { reportsApi } from '@/lib/api/reports';
 
 // ── Formatting ─────────────────────────────────────────────────────────
 function fmtCurrency(n: number) {
@@ -122,6 +124,7 @@ function computeSellMetrics(sell: Trade, allTrades: Trade[]): SellMetrics {
 
 // ── Main component ─────────────────────────────────────────────────────
 export function ReportsView({ trades }: { trades: Trade[] }) {
+  const { token } = useAuth();
   // Only AUD-denominated trades are included in capital gains calculations.
   const audTrades = useMemo(
     () => trades.filter(t => !t.currency || t.currency === 'AUD'),
@@ -135,6 +138,21 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
   }, [audTrades]);
 
   const [selectedFY, setSelectedFY] = useState<number | null>(null);
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const [exportingCsv, setExportingCsv] = useState(false);
+
+  async function handleExport(format: 'pdf' | 'csv') {
+    if (selectedFY === null || !token) return;
+    const setExporting = format === 'pdf' ? setExportingPdf : setExportingCsv;
+    setExporting(true);
+    try {
+      await reportsApi.export(selectedFY, format, token);
+    } catch {
+      // silently ignore — the download simply won't happen
+    } finally {
+      setExporting(false);
+    }
+  }
 
   useEffect(() => {
     if (availableFYs.length > 0 && selectedFY === null) {
@@ -175,8 +193,8 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
 
   return (
     <div className="space-y-6">
-      {/* FY selector */}
-      <div className="flex items-center gap-3">
+      {/* FY selector + export buttons */}
+      <div className="flex flex-wrap items-center gap-3">
         <label htmlFor="fy-select" className="text-sm font-medium text-gray-700">
           Financial year
         </label>
@@ -190,6 +208,44 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
             <option key={fy} value={fy}>FY{fy}</option>
           ))}
         </select>
+
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={() => handleExport('csv')}
+            disabled={exportingCsv || selectedFY === null}
+            className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {exportingCsv ? (
+              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              </svg>
+            ) : (
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+            )}
+            Export CSV
+          </button>
+
+          <button
+            onClick={() => handleExport('pdf')}
+            disabled={exportingPdf || selectedFY === null}
+            className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {exportingPdf ? (
+              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              </svg>
+            ) : (
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+            )}
+            Export PDF
+          </button>
+        </div>
       </div>
 
       {/* Summary card */}

@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "YbZJHM5wRP8=",
+  "dgSpecHash": "f3WsOvWqQGQ=",
   "success": true,
-  "projectFilePath": "/Users/ben/Documents/ShareTracker/tests/ShareTracker.Domain.Tests/ShareTracker.Domain.Tests.csproj",
+  "projectFilePath": "/Users/ben/Documents/GitHub/ShareTracker/tests/ShareTracker.Domain.Tests/ShareTracker.Domain.Tests.csproj",
   "expectedPackageFiles": [
     "/Users/ben/.nuget/packages/coverlet.collector/6.0.2/coverlet.collector.6.0.2.nupkg.sha512",
     "/Users/ben/.nuget/packages/microsoft.codecoverage/17.12.0/microsoft.codecoverage.17.12.0.nupkg.sha512",

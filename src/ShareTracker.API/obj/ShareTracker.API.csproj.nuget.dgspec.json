@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "/Users/ben/Documents/ShareTracker/src/ShareTracker.API/ShareTracker.API.csproj": {}
+    "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.API/ShareTracker.API.csproj": {}
   },
   "projects": {
-    "/Users/ben/Documents/ShareTracker/src/ShareTracker.API/ShareTracker.API.csproj": {
+    "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.API/ShareTracker.API.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/ben/Documents/ShareTracker/src/ShareTracker.API/ShareTracker.API.csproj",
+        "projectUniqueName": "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.API/ShareTracker.API.csproj",
         "projectName": "ShareTracker.API",
-        "projectPath": "/Users/ben/Documents/ShareTracker/src/ShareTracker.API/ShareTracker.API.csproj",
+        "projectPath": "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.API/ShareTracker.API.csproj",
         "packagesPath": "/Users/ben/.nuget/packages/",
-        "outputPath": "/Users/ben/Documents/ShareTracker/src/ShareTracker.API/obj/",
+        "outputPath": "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.API/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/Users/ben/.nuget/NuGet/NuGet.Config"
@@ -26,11 +26,11 @@
           "net9.0": {
             "targetAlias": "net9.0",
             "projectReferences": {
-              "/Users/ben/Documents/ShareTracker/src/ShareTracker.Application/ShareTracker.Application.csproj": {
-                "projectPath": "/Users/ben/Documents/ShareTracker/src/ShareTracker.Application/ShareTracker.Application.csproj"
+              "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.Application/ShareTracker.Application.csproj": {
+                "projectPath": "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.Application/ShareTracker.Application.csproj"
               },
-              "/Users/ben/Documents/ShareTracker/src/ShareTracker.Infrastructure/ShareTracker.Infrastructure.csproj": {
-                "projectPath": "/Users/ben/Documents/ShareTracker/src/ShareTracker.Infrastructure/ShareTracker.Infrastructure.csproj"
+              "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.Infrastructure/ShareTracker.Infrastructure.csproj": {
+                "projectPath": "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.Infrastructure/ShareTracker.Infrastructure.csproj"
               }
             }
           }
@@ -85,14 +85,14 @@
         }
       }
     },
-    "/Users/ben/Documents/ShareTracker/src/ShareTracker.Application/ShareTracker.Application.csproj": {
+    "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.Application/ShareTracker.Application.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/ben/Documents/ShareTracker/src/ShareTracker.Application/ShareTracker.Application.csproj",
+        "projectUniqueName": "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.Application/ShareTracker.Application.csproj",
         "projectName": "ShareTracker.Application",
-        "projectPath": "/Users/ben/Documents/ShareTracker/src/ShareTracker.Application/ShareTracker.Application.csproj",
+        "projectPath": "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.Application/ShareTracker.Application.csproj",
         "packagesPath": "/Users/ben/.nuget/packages/",
-        "outputPath": "/Users/ben/Documents/ShareTracker/src/ShareTracker.Application/obj/",
+        "outputPath": "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.Application/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/Users/ben/.nuget/NuGet/NuGet.Config"
@@ -107,8 +107,8 @@
           "net9.0": {
             "targetAlias": "net9.0",
             "projectReferences": {
-              "/Users/ben/Documents/ShareTracker/src/ShareTracker.Domain/ShareTracker.Domain.csproj": {
-                "projectPath": "/Users/ben/Documents/ShareTracker/src/ShareTracker.Domain/ShareTracker.Domain.csproj"
+              "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.Domain/ShareTracker.Domain.csproj": {
+                "projectPath": "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.Domain/ShareTracker.Domain.csproj"
               }
             }
           }
@@ -166,14 +166,14 @@
         }
       }
     },
-    "/Users/ben/Documents/ShareTracker/src/ShareTracker.Domain/ShareTracker.Domain.csproj": {
+    "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.Domain/ShareTracker.Domain.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/ben/Documents/ShareTracker/src/ShareTracker.Domain/ShareTracker.Domain.csproj",
+        "projectUniqueName": "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.Domain/ShareTracker.Domain.csproj",
         "projectName": "ShareTracker.Domain",
-        "projectPath": "/Users/ben/Documents/ShareTracker/src/ShareTracker.Domain/ShareTracker.Domain.csproj",
+        "projectPath": "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.Domain/ShareTracker.Domain.csproj",
         "packagesPath": "/Users/ben/.nuget/packages/",
-        "outputPath": "/Users/ben/Documents/ShareTracker/src/ShareTracker.Domain/obj/",
+        "outputPath": "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.Domain/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/Users/ben/.nuget/NuGet/NuGet.Config"
@@ -225,14 +225,14 @@
         }
       }
     },
-    "/Users/ben/Documents/ShareTracker/src/ShareTracker.Infrastructure/ShareTracker.Infrastructure.csproj": {
+    "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.Infrastructure/ShareTracker.Infrastructure.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/ben/Documents/ShareTracker/src/ShareTracker.Infrastructure/ShareTracker.Infrastructure.csproj",
+        "projectUniqueName": "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.Infrastructure/ShareTracker.Infrastructure.csproj",
         "projectName": "ShareTracker.Infrastructure",
-        "projectPath": "/Users/ben/Documents/ShareTracker/src/ShareTracker.Infrastructure/ShareTracker.Infrastructure.csproj",
+        "projectPath": "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.Infrastructure/ShareTracker.Infrastructure.csproj",
         "packagesPath": "/Users/ben/.nuget/packages/",
-        "outputPath": "/Users/ben/Documents/ShareTracker/src/ShareTracker.Infrastructure/obj/",
+        "outputPath": "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.Infrastructure/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/Users/ben/.nuget/NuGet/NuGet.Config"
@@ -247,11 +247,11 @@
           "net9.0": {
             "targetAlias": "net9.0",
             "projectReferences": {
-              "/Users/ben/Documents/ShareTracker/src/ShareTracker.Application/ShareTracker.Application.csproj": {
-                "projectPath": "/Users/ben/Documents/ShareTracker/src/ShareTracker.Application/ShareTracker.Application.csproj"
+              "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.Application/ShareTracker.Application.csproj": {
+                "projectPath": "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.Application/ShareTracker.Application.csproj"
               },
-              "/Users/ben/Documents/ShareTracker/src/ShareTracker.Domain/ShareTracker.Domain.csproj": {
-                "projectPath": "/Users/ben/Documents/ShareTracker/src/ShareTracker.Domain/ShareTracker.Domain.csproj"
+              "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.Domain/ShareTracker.Domain.csproj": {
+                "projectPath": "/Users/ben/Documents/GitHub/ShareTracker/src/ShareTracker.Domain/ShareTracker.Domain.csproj"
               }
             }
           }
@@ -272,6 +272,10 @@
         "net9.0": {
           "targetAlias": "net9.0",
           "dependencies": {
+            "CsvHelper": {
+              "target": "Package",
+              "version": "[33.1.0, )"
+            },
             "Microsoft.AspNetCore.Authentication.JwtBearer": {
               "target": "Package",
               "version": "[8.*, )"
@@ -293,6 +297,10 @@
             "Npgsql.EntityFrameworkCore.PostgreSQL": {
               "target": "Package",
               "version": "[8.*, )"
+            },
+            "QuestPDF": {
+              "target": "Package",
+              "version": "[2026.2.2, )"
             },
             "System.IdentityModel.Tokens.Jwt": {
               "target": "Package",

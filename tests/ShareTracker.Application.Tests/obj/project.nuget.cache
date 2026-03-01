@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "PYReVEj1CmI=",
+  "dgSpecHash": "1zbCrboKU2g=",
   "success": true,
-  "projectFilePath": "/Users/ben/Documents/ShareTracker/tests/ShareTracker.Application.Tests/ShareTracker.Application.Tests.csproj",
+  "projectFilePath": "/Users/ben/Documents/GitHub/ShareTracker/tests/ShareTracker.Application.Tests/ShareTracker.Application.Tests.csproj",
   "expectedPackageFiles": [
     "/Users/ben/.nuget/packages/castle.core/5.1.1/castle.core.5.1.1.nupkg.sha512",
     "/Users/ben/.nuget/packages/coverlet.collector/6.0.2/coverlet.collector.6.0.2.nupkg.sha512",
