@@ -26,8 +26,23 @@ builder.Services.AddTransient(
     typeof(ValidationBehavior<,>));
 
 // ── Infrastructure: EF Core ──────────────────────────────────────────────────
+// Npgsql 8 doesn't parse postgres:// URIs — convert to key=value format when needed
+static string NormalizeConnectionString(string cs)
+{
+    if (!cs.StartsWith("postgres://") && !cs.StartsWith("postgresql://"))
+        return cs;
+    var uri      = new Uri(cs);
+    var userInfo = uri.UserInfo.Split(':', 2);
+    var user     = Uri.UnescapeDataString(userInfo[0]);
+    var pass     = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
+    var port     = uri.Port > 0 ? uri.Port : 5432;
+    var db       = uri.AbsolutePath.TrimStart('/');
+    return $"Host={uri.Host};Port={port};Database={db};Username={user};Password={pass};SSL Mode=Require;Trust Server Certificate=true;";
+}
+
 builder.Services.AddDbContext<ShareTrackerDbContext>(opts =>
-    opts.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    opts.UseNpgsql(NormalizeConnectionString(
+        builder.Configuration.GetConnectionString("DefaultConnection")!)));
 
 // ── Infrastructure: Clerk JWT validation ─────────────────────────────────────
 // Clerk issues RS256 tokens; the middleware fetches and caches JWKS automatically
