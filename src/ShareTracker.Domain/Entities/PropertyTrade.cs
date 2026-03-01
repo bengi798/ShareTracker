@@ -20,6 +20,24 @@ public class PropertyTrade : Trade
         PropertyType = propertyType;
     }
 
+    public void Update(
+        decimal pricePerUnit,
+        decimal numberOfUnits,
+        DateOnly dateOfTrade,
+        string address,
+        PropertyType propertyType,
+        Currency currency,
+        bool isForeignTrade = false,
+        decimal? exchangeRate = null)
+    {
+        if (string.IsNullOrWhiteSpace(address))
+            throw new ArgumentException("Address must not be empty.");
+
+        UpdateBase(pricePerUnit, numberOfUnits, dateOfTrade, currency, isForeignTrade, exchangeRate);
+        Address = address;
+        PropertyType = propertyType;
+    }
+
     public static PropertyTrade Create(
         string userId,
         decimal pricePerUnit,

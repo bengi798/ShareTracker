@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ShareTracker.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+69221faff3662905a06c69cbe7a8bc39e93d4774")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0bb878c47466fc9c8288517d4990e2208337a303")]
 [assembly: System.Reflection.AssemblyProductAttribute("ShareTracker.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ShareTracker.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

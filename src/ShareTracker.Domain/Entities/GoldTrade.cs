@@ -20,6 +20,24 @@ public class GoldTrade : Trade
         WeightUnit = weightUnit;
     }
 
+    public void Update(
+        decimal pricePerUnit,
+        decimal numberOfUnits,
+        DateOnly dateOfTrade,
+        int purityCarats,
+        WeightUnit weightUnit,
+        Currency currency,
+        bool isForeignTrade = false,
+        decimal? exchangeRate = null)
+    {
+        if (purityCarats is < 1 or > 24)
+            throw new ArgumentException("Purity carats must be between 1 and 24.");
+
+        UpdateBase(pricePerUnit, numberOfUnits, dateOfTrade, currency, isForeignTrade, exchangeRate);
+        PurityCarats = purityCarats;
+        WeightUnit = weightUnit;
+    }
+
     public static GoldTrade Create(
         string userId,
         decimal pricePerUnit,

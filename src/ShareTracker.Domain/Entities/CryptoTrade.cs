@@ -22,6 +22,28 @@ public class CryptoTrade : Trade
         BrokerageFees = brokerageFees;
     }
 
+    public void Update(
+        decimal pricePerUnit,
+        decimal numberOfUnits,
+        DateOnly dateOfTrade,
+        string coinSymbol,
+        string? network,
+        Currency currency,
+        bool isForeignTrade = false,
+        decimal? exchangeRate = null,
+        decimal? brokerageFees = null)
+    {
+        if (string.IsNullOrWhiteSpace(coinSymbol))
+            throw new ArgumentException("Coin symbol must not be empty.");
+        if (brokerageFees.HasValue && brokerageFees.Value < 0)
+            throw new ArgumentException("Brokerage fees cannot be negative.");
+
+        UpdateBase(pricePerUnit, numberOfUnits, dateOfTrade, currency, isForeignTrade, exchangeRate);
+        CoinSymbol = coinSymbol.ToUpperInvariant();
+        Network = network;
+        BrokerageFees = brokerageFees;
+    }
+
     public static CryptoTrade Create(
         string userId,
         decimal pricePerUnit,

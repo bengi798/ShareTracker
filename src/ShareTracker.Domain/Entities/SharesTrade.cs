@@ -23,6 +23,26 @@ public class SharesTrade : Trade
         BrokerageFees = brokerageFees;
     }
 
+    public void Update(
+        decimal pricePerUnit,
+        decimal numberOfUnits,
+        DateOnly dateOfTrade,
+        string ticker,
+        Exchange exchange,
+        Currency currency,
+        bool isForeignTrade = false,
+        decimal? exchangeRate = null,
+        decimal? brokerageFees = null)
+    {
+        if (brokerageFees.HasValue && brokerageFees.Value < 0)
+            throw new ArgumentException("Brokerage fees cannot be negative.");
+
+        UpdateBase(pricePerUnit, numberOfUnits, dateOfTrade, currency, isForeignTrade, exchangeRate);
+        Ticker = TickerSymbol.Create(ticker);
+        Exchange = exchange;
+        BrokerageFees = brokerageFees;
+    }
+
     public static SharesTrade Create(
         string userId,
         decimal pricePerUnit,

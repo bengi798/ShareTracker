@@ -24,6 +24,32 @@ public class BondTrade : Trade
         Issuer = issuer;
     }
 
+    public void Update(
+        decimal pricePerUnit,
+        decimal numberOfUnits,
+        DateOnly dateOfTrade,
+        string bondCode,
+        decimal yieldPercent,
+        DateOnly maturityDate,
+        string issuer,
+        Currency currency,
+        bool isForeignTrade = false,
+        decimal? exchangeRate = null)
+    {
+        if (string.IsNullOrWhiteSpace(bondCode))
+            throw new ArgumentException("Bond code must not be empty.");
+        if (yieldPercent <= 0)
+            throw new ArgumentException("Yield percent must be greater than zero.");
+        if (string.IsNullOrWhiteSpace(issuer))
+            throw new ArgumentException("Issuer must not be empty.");
+
+        UpdateBase(pricePerUnit, numberOfUnits, dateOfTrade, currency, isForeignTrade, exchangeRate);
+        BondCode = bondCode.ToUpperInvariant();
+        YieldPercent = yieldPercent;
+        MaturityDate = maturityDate;
+        Issuer = issuer;
+    }
+
     public static BondTrade Create(
         string userId,
         decimal pricePerUnit,

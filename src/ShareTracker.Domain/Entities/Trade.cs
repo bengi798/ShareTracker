@@ -54,6 +54,30 @@ public abstract class Trade
         ExchangeRateApplied = isForeignTrade && exchangeRate.HasValue;
     }
 
+    protected void UpdateBase(
+        decimal pricePerUnit,
+        decimal numberOfUnits,
+        DateOnly dateOfTrade,
+        Currency currency,
+        bool isForeignTrade,
+        decimal? exchangeRate)
+    {
+        var price = Money.Create(pricePerUnit);
+        var units = Quantity.Create(numberOfUnits);
+
+        PricePerUnit = price.Amount;
+        NumberOfUnits = units.Value;
+        DateOfTrade = dateOfTrade;
+        Currency = currency;
+
+        if (isForeignTrade && (!exchangeRate.HasValue || exchangeRate <= 0))
+            throw new ArgumentException("A positive exchange rate must be provided for foreign trades.");
+
+        IsForeignTrade = isForeignTrade;
+        ExchangeRate = isForeignTrade ? exchangeRate : null;
+        ExchangeRateApplied = isForeignTrade && exchangeRate.HasValue;
+    }
+
     /// <summary>
     /// Allocates <paramref name="units"/> sold against this buy trade (FIFO bookkeeping).
     /// Only valid on Buy trades. Throws if allocation would exceed NumberOfUnits.
