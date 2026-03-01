@@ -71,55 +71,104 @@ function getBrokerageFees(trade: Trade): number {
   return 0;
 }
 
-// ── Sell metrics (weighted average cost basis + CGT discount) ──────────
+// ── Sell metrics (FIFO lot-based CGT calculation) ─────────────────────
 interface SellMetrics {
-  costBasis:          number;
-  proceeds:           number;
-  gainLoss:           number;
-  cgtDiscountApplies: boolean;
-  discountedGain:     number;
+  costBasis:                 number;
+  proceeds:                  number;
+  gainLoss:                  number;
+  cgtDiscountApplies:        boolean; // true if any lot qualifies for 50% discount
+  discountedGain:            number;  // total taxable gain after applying discounts
+  isSplit:                   boolean; // some lots discounted, some not
+  splitDiscountedTaxable:    number;  // taxable gain from discounted lots (gross × 50%)
+  splitNonDiscountedTaxable: number;  // full gain/loss from non-discounted lots
 }
 
-function computeSellMetrics(sell: Trade, allTrades: Trade[]): SellMetrics {
-  const key = assetKey(sell);
-  const history = allTrades
-    .filter(t => assetKey(t) === key)
-    .sort((a, b) =>
+// Processes all AUD trades using FIFO lot tracking so that when a sale spans
+// buy lots with different holding periods, the 50% CGT discount is applied
+// only to the portion held for more than 12 months.
+function computeAllSellMetrics(allTrades: Trade[]): Map<string, SellMetrics> {
+  const byAsset = new Map<string, Trade[]>();
+  for (const trade of allTrades) {
+    const key = assetKey(trade);
+    if (!byAsset.has(key)) byAsset.set(key, []);
+    byAsset.get(key)!.push(trade);
+  }
+
+  const result = new Map<string, SellMetrics>();
+
+  for (const trades of Array.from(byAsset.values())) {
+    const sorted = [...trades].sort((a, b) =>
       a.dateOfTrade.localeCompare(b.dateOfTrade) ||
       a.createdAt.localeCompare(b.createdAt),
     );
 
-  let sumBuyUnits = 0;
-  let sumBuyValue = 0;
-  let earliestBuyDate: string | null = null;
-  for (const t of history) {
-    if (t.tradeType === 'Buy') {
-      if (earliestBuyDate === null) earliestBuyDate = t.dateOfTrade;
-      sumBuyUnits += t.numberOfUnits;
-      // Include brokerage in cost base: BUY $500 + $30 brokerage = $530 cost base
-      sumBuyValue += t.pricePerUnit * t.numberOfUnits + getBrokerageFees(t);
+    // FIFO lot pool: tracks remaining units and cost-per-unit (including brokerage)
+    const lots: { date: string; costPerUnit: number; remaining: number }[] = [];
+
+    for (const trade of sorted) {
+      if (trade.tradeType === 'Buy') {
+        const brokerage = getBrokerageFees(trade);
+        const totalCost = trade.pricePerUnit * trade.numberOfUnits + brokerage;
+        lots.push({
+          date:        trade.dateOfTrade,
+          costPerUnit: trade.numberOfUnits > 0 ? totalCost / trade.numberOfUnits : 0,
+          remaining:   trade.numberOfUnits,
+        });
+      } else if (trade.tradeType === 'Sell') {
+        const sellBrokerage  = getBrokerageFees(trade);
+        const totalProceeds  = trade.pricePerUnit * trade.numberOfUnits - sellBrokerage;
+        const proceedsPerUnit = trade.numberOfUnits > 0 ? totalProceeds / trade.numberOfUnits : 0;
+        const sellDate        = new Date(trade.dateOfTrade + 'T00:00:00');
+
+        let unitsToSell          = trade.numberOfUnits;
+        let totalCostBasis       = 0;
+        let discountedTaxable    = 0; // gain × 0.5 for lots held > 12 months
+        let nonDiscountedTaxable = 0; // full gain/loss for lots held ≤ 12 months
+        let anyDiscount          = false;
+        let anyNonDiscount       = false;
+
+        for (const lot of lots) {
+          if (unitsToSell <= 0) break;
+          if (lot.remaining === 0) continue;
+
+          const unitsFromLot = Math.min(lot.remaining, unitsToSell);
+          lot.remaining -= unitsFromLot;
+          unitsToSell   -= unitsFromLot;
+
+          const lotCostBasis = lot.costPerUnit * unitsFromLot;
+          const lotProceeds  = proceedsPerUnit * unitsFromLot;
+          const lotGain      = lotProceeds - lotCostBasis;
+          totalCostBasis    += lotCostBasis;
+
+          const buyDate         = new Date(lot.date + 'T00:00:00');
+          const oneYearAfterBuy = new Date(buyDate);
+          oneYearAfterBuy.setFullYear(oneYearAfterBuy.getFullYear() + 1);
+          const discountApplies = lotGain > 0 && sellDate > oneYearAfterBuy;
+
+          if (discountApplies) {
+            anyDiscount        = true;
+            discountedTaxable += lotGain * 0.5;
+          } else {
+            anyNonDiscount       = true;
+            nonDiscountedTaxable += lotGain;
+          }
+        }
+
+        result.set(trade.id, {
+          costBasis:                 totalCostBasis,
+          proceeds:                  totalProceeds,
+          gainLoss:                  totalProceeds - totalCostBasis,
+          cgtDiscountApplies:        anyDiscount,
+          discountedGain:            discountedTaxable + nonDiscountedTaxable,
+          isSplit:                   anyDiscount && anyNonDiscount,
+          splitDiscountedTaxable:    discountedTaxable,
+          splitNonDiscountedTaxable: nonDiscountedTaxable,
+        });
+      }
     }
-    if (t.id === sell.id) break;
   }
 
-  const avgCost   = sumBuyUnits > 0 ? sumBuyValue / sumBuyUnits : 0;
-  const costBasis = avgCost * sell.numberOfUnits;
-  // Deduct brokerage from proceeds: SELL $500 - $30 brokerage = $470 net proceeds
-  const proceeds  = sell.pricePerUnit * sell.numberOfUnits - getBrokerageFees(sell);
-  const gainLoss  = proceeds - costBasis;
-
-  // Australian 50% CGT discount: applies when gain is positive and asset held > 12 months
-  let cgtDiscountApplies = false;
-  if (gainLoss > 0 && earliestBuyDate !== null) {
-    const buyDate         = new Date(earliestBuyDate + 'T00:00:00');
-    const sellDate        = new Date(sell.dateOfTrade + 'T00:00:00');
-    const oneYearAfterBuy = new Date(buyDate);
-    oneYearAfterBuy.setFullYear(oneYearAfterBuy.getFullYear() + 1);
-    cgtDiscountApplies = sellDate > oneYearAfterBuy;
-  }
-
-  const discountedGain = cgtDiscountApplies ? gainLoss * 0.5 : gainLoss;
-  return { costBasis, proceeds, gainLoss, cgtDiscountApplies, discountedGain };
+  return result;
 }
 
 // ── Main component ─────────────────────────────────────────────────────
@@ -167,13 +216,20 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
       .sort((a, b) => a.dateOfTrade.localeCompare(b.dateOfTrade));
   }, [audTrades, selectedFY]);
 
+  // Compute FIFO metrics across all FYs so lot pools carry over correctly
+  const allSellMetrics = useMemo(() => computeAllSellMetrics(audTrades), [audTrades]);
+
+  // Filter to the selected FY's sells for display and summary calculations
   const sellMetrics = useMemo(() => {
     const map = new Map<string, SellMetrics>();
-    fyTrades
-      .filter(t => t.tradeType === 'Sell')
-      .forEach(t => map.set(t.id, computeSellMetrics(t, audTrades)));
+    if (selectedFY === null) return map;
+    for (const t of fyTrades) {
+      if (t.tradeType !== 'Sell') continue;
+      const m = allSellMetrics.get(t.id);
+      if (m) map.set(t.id, m);
+    }
     return map;
-  }, [fyTrades, audTrades]);
+  }, [allSellMetrics, fyTrades, selectedFY]);
 
   const totalProceeds      = useMemo(() => Array.from(sellMetrics.values()).reduce((s, m) => s + m.proceeds,       0), [sellMetrics]);
   const totalCostBasis     = useMemo(() => Array.from(sellMetrics.values()).reduce((s, m) => s + m.costBasis,      0), [sellMetrics]);
@@ -382,11 +438,20 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
                         {metrics ? (
                           <span className="flex flex-col items-end gap-0.5">
                             <span>{`${metrics.discountedGain >= 0 ? '+' : ''}${fmtCurrency(metrics.discountedGain)}`}</span>
-                            {metrics.cgtDiscountApplies && (
+                            {metrics.isSplit ? (
+                              <>
+                                <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-700">
+                                  Partial 50% CGT discount
+                                </span>
+                                <span className="text-xs text-gray-400">
+                                  {`${fmtCurrency(metrics.splitDiscountedTaxable)} discounted + ${fmtCurrency(metrics.splitNonDiscountedTaxable)} full`}
+                                </span>
+                              </>
+                            ) : metrics.cgtDiscountApplies ? (
                               <span className="rounded bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-700">
                                 50% CGT discount
                               </span>
-                            )}
+                            ) : null}
                           </span>
                         ) : '—'}
                       </td>
