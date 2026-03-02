@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ShareTracker.API")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+65eb52db06b4b6061a158dbf9cadbe171309cd89")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+def57c86a3e9192ef65a6940aeb8f815a7655a59")]
 [assembly: System.Reflection.AssemblyProductAttribute("ShareTracker.API")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ShareTracker.API")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
