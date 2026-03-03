@@ -11,6 +11,14 @@ obj/
 .vs/
 TestResults/
 
+# ── Node / Next.js ────────────────────────────────────────────────────────────
+node_modules/
+.next/
+.turbo/
+out/
+dist/
+*.tsbuildinfo
+
 # ── Docker ────────────────────────────────────────────────────────────────────
 docker-compose.override.yml
 
