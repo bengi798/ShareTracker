@@ -89,7 +89,7 @@ export function DividendsView({ trades }: { trades: Trade[] }) {
     const today = new Date().toISOString().split('T')[0];
     const options: ShareOption[] = [];
 
-    for (const [, tList] of map.entries()) {
+    for (const tList of Array.from(map.values())) {
       const sorted = [...tList].sort((a, b) =>
         a.dateOfTrade.localeCompare(b.dateOfTrade) || a.createdAt.localeCompare(b.createdAt),
       );
