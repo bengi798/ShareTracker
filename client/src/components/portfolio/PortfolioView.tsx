@@ -13,7 +13,7 @@ import {
   type PropertyPosition,
 } from '@/lib/positions';
 import { useForexRates } from '@/hooks/useForexRates';
-import { useLiveQuotes } from '@/hooks/useLiveQuotes';
+import { useLiveQuotes, type LiveChange } from '@/hooks/useLiveQuotes';
 import { useIsInvestor } from '@/lib/auth/usePlan';
 
 // ── Currency helpers ──────────────────────────────────────────────────
@@ -121,6 +121,7 @@ function SharesCategorySection({
   displayMode,
   homeCurrency,
   rates,
+  liveChanges,
 }: {
   positions:     SharesPosition[];
   quotes:        SharesQuote[];
@@ -128,6 +129,7 @@ function SharesCategorySection({
   displayMode:   string;
   homeCurrency:  string;
   rates:         Record<string, number>;
+  liveChanges?:  Map<string, LiveChange>;
 }) {
   function fmtVal(amount: number, currency: string) {
     const c = normCurrency(currency);
@@ -166,6 +168,7 @@ function SharesCategorySection({
               <th className="w-[14%] px-3 py-2 text-right">Last Price</th>
               <th className="w-[14%] px-3 py-2 text-right">Mkt Value</th>
               <th className="w-[14%] px-3 py-2 text-right">P&amp;L</th>
+              {liveChanges && <th className="px-3 py-2 text-right">Today</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -177,6 +180,7 @@ function SharesCategorySection({
               const currentValue = lastClose !== null ? lastClose * p.availableUnits : null;
               const pnl          = currentValue !== null ? currentValue - p.totalCost : null;
               const displayCurrency = displayMode === 'home' ? homeCurrency : normCurrency(p.currency);
+              const lc = liveChanges?.get(`${p.ticker.toUpperCase()}|${p.exchange}`);
 
               return (
                 <tr key={i} className="hover:bg-gray-50">
@@ -196,6 +200,18 @@ function SharesCategorySection({
                   }`}>
                     {pnl === null ? '—' : `${pnl >= 0 ? '+' : ''}${fmtVal(pnl, p.currency)}`}
                   </td>
+                  {liveChanges && (
+                    <td className={`px-3 py-3 text-right text-sm whitespace-nowrap ${
+                      !lc ? 'text-gray-400' : lc.change >= 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {lc ? (
+                        <span className="flex flex-col items-end">
+                          <span>{lc.change >= 0 ? '+' : ''}{fmtVal(lc.change, p.currency)}</span>
+                          <span className="text-xs">{lc.changePercent >= 0 ? '+' : ''}{lc.changePercent.toFixed(2)}%</span>
+                        </span>
+                      ) : '—'}
+                    </td>
+                  )}
                 </tr>
               );
             })}
@@ -214,6 +230,7 @@ function CryptoCategorySection({
   displayMode,
   homeCurrency,
   rates,
+  liveChanges,
 }: {
   positions:     CryptoPosition[];
   quotes:        CryptoQuote[];
@@ -221,6 +238,7 @@ function CryptoCategorySection({
   displayMode:   string;
   homeCurrency:  string;
   rates:         Record<string, number>;
+  liveChanges?:  Map<string, LiveChange>;
 }) {
   function fmtVal(amount: number, currency: string) {
     const c = normCurrency(currency);
@@ -259,6 +277,7 @@ function CryptoCategorySection({
               <th className="w-[14%] px-3 py-2 text-right">Last Price</th>
               <th className="w-[14%] px-3 py-2 text-right">Mkt Value</th>
               <th className="w-[14%] px-3 py-2 text-right">P&amp;L</th>
+              {liveChanges && <th className="px-3 py-2 text-right">Today</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -268,6 +287,7 @@ function CryptoCategorySection({
               const currentValue = lastClose !== null ? lastClose * p.availableUnits : null;
               const pnl          = currentValue !== null ? currentValue - p.totalCost : null;
               const displayCurrency = displayMode === 'home' ? homeCurrency : normCurrency(p.currency);
+              const lc = liveChanges?.get(p.coinSymbol.toUpperCase());
 
               return (
                 <tr key={i} className="hover:bg-gray-50">
@@ -287,6 +307,18 @@ function CryptoCategorySection({
                   }`}>
                     {pnl === null ? '—' : `${pnl >= 0 ? '+' : ''}${fmtVal(pnl, p.currency)}`}
                   </td>
+                  {liveChanges && (
+                    <td className={`px-3 py-3 text-right text-sm whitespace-nowrap ${
+                      !lc ? 'text-gray-400' : lc.change >= 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {lc ? (
+                        <span className="flex flex-col items-end">
+                          <span>{lc.change >= 0 ? '+' : ''}{fmtVal(lc.change, p.currency)}</span>
+                          <span className="text-xs">{lc.changePercent >= 0 ? '+' : ''}{lc.changePercent.toFixed(2)}%</span>
+                        </span>
+                      ) : '—'}
+                    </td>
+                  )}
                 </tr>
               );
             })}
@@ -315,7 +347,7 @@ export function PortfolioView({
   // ── Price mode: EOD (default) or Live (Investor only) ───────────────
   const [priceMode, setPriceMode] = useState<'eod' | 'live'>('eod');
 
-  const { liveShares, liveCrypto, liveLoading } = useLiveQuotes(
+  const { liveShares, liveCrypto, liveDayChange, liveChanges, liveLoading } = useLiveQuotes(
     positions.shares,
     positions.crypto,
     priceMode === 'live',
@@ -429,6 +461,13 @@ export function PortfolioView({
 
   const hasPositions = useMemo(() => hasAnyPosition(positions), [positions]);
 
+  const eodDateLabel = useMemo(() => {
+    const asOf = quotes.find(q => q.asOf)?.asOf;
+    if (!asOf) return 'EOD';
+    const d = new Date(asOf + 'T00:00:00');
+    return `EOD (${d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })})`;
+  }, [quotes]);
+
   if (!hasPositions) {
     return (
       <div className="rounded-xl border border-dashed border-gray-300 py-16 text-center">
@@ -454,7 +493,7 @@ export function PortfolioView({
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
           }`}
         >
-          EOD
+          {eodDateLabel}
         </button>
         <button
           onClick={() => isInvestor && setPriceMode('live')}
@@ -467,7 +506,7 @@ export function PortfolioView({
               : 'cursor-not-allowed bg-gray-100 text-gray-400'
           }`}
         >
-          Live
+          Live (15m delay)
           {!isInvestor && (
             <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
@@ -537,6 +576,24 @@ export function PortfolioView({
             {totalPnl >= 0 ? '+' : ''}{fmtCurrency(totalPnl, summaryCurrency)}
           </p>
         </div>
+        {priceMode === 'live' && liveDayChange !== null && (
+          <div>
+            <p className="text-sm text-gray-500">Today&apos;s Change</p>
+            <p className={`mt-1 text-3xl font-bold ${
+              liveDayChange > 0 ? 'text-green-600' : liveDayChange < 0 ? 'text-red-600' : 'text-gray-400'
+            }`}>
+              {liveDayChange >= 0 ? '+' : ''}{fmtCurrency(liveDayChange, summaryCurrency)}
+            </p>
+            {totalMarketValue > 0 && (
+              <p className={`mt-0.5 text-sm font-medium ${
+                liveDayChange > 0 ? 'text-green-600' : liveDayChange < 0 ? 'text-red-600' : 'text-gray-400'
+              }`}>
+                {liveDayChange >= 0 ? '+' : ''}
+                {((liveDayChange / (totalMarketValue - liveDayChange)) * 100).toFixed(2)}%
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── Shares ─────────────────────────────────────────────────── */}
@@ -548,6 +605,7 @@ export function PortfolioView({
           displayMode={displayMode}
           homeCurrency={homeCurrency}
           rates={rates}
+          liveChanges={priceMode === 'live' ? liveChanges : undefined}
         />
       )}
 
@@ -565,10 +623,11 @@ export function PortfolioView({
         <CryptoCategorySection
           positions={visibleCrypto}
           quotes={cryptoQuotes}
-          quotesLoading={quotesLoading}
+          quotesLoading={effectiveQuotesLoading}
           displayMode={displayMode}
           homeCurrency={homeCurrency}
           rates={rates}
+          liveChanges={priceMode === 'live' ? liveChanges : undefined}
         />
       )}
 
