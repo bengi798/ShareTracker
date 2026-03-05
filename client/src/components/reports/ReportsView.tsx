@@ -100,23 +100,23 @@ interface DividendRecord {
 }
 
 interface FYDividendRow {
-  ticker:         string | null;
-  exchange:       string | null;
-  date:           string | null;
-  paymentDate:    string | null;
-  period:         string | null;
-  franking:       string | null;
-  value:          number | null;
-  currency:       string | null;
-  unitsHeld:      number | null;
-  totalDividend:  number | null;
-  frankingCredit: number | null;
+  ticker:         string;
+  exchange:       string;
+  date:           string;
+  paymentDate:    string;
+  period:         string;
+  franking:       string;
+  value:          number;
+  currency:       string;
+  unitsHeld:      number;
+  totalDividend:  number;
+  frankingCredit: number;
 }
 
 interface ActiveShare {
-  ticker:   string | null;
-  exchange: string | null;
-  symbol:   string | null;
+  ticker:   string;
+  exchange: string;
+  symbol:   string;
   trades:   SharesTrade[];
 }
 
@@ -332,9 +332,9 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
                   ticker:         share.ticker,
                   exchange:       share.exchange,
                   date:           d.date,
-                  paymentDate:    d.paymentDate,
+                  paymentDate:    d.paymentDate ?? '',
                   period:         d.period,
-                  franking:       d.franking,
+                  franking:       d.franking ?? '',
                   value:          d.value,
                   currency:       d.currency,
                   unitsHeld,
@@ -352,10 +352,9 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
       .then(results => {
         if (cancelled) return;
         setFyDividends(
-          results.flat().sort((a, b) => {
-            console.log('Comparing dividends', a, b);
-            return a.date.localeCompare(b.date) || a.ticker.localeCompare(b.ticker);
-          }),
+          results.flat().sort((a, b) =>
+            a.date.localeCompare(b.date) || a.ticker.localeCompare(b.ticker),
+          ),
         );
       })
       .catch(() => {
