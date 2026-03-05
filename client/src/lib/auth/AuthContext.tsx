@@ -53,8 +53,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!token || profileLoaded) return;
 
-    const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000';
-    fetch(`${API}/api/profile`, { headers: { Authorization: `Bearer ${token}` } })
+    const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000/api';
+    fetch(`${API}/profile`, { headers: { Authorization: `Bearer ${token}` } })
       .then(res => (res.ok ? res.json() : null))
       .then(data => {
         setHomeCurrency(data?.homeCurrency ?? null);

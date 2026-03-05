@@ -8,7 +8,7 @@ namespace ShareTracker.API.Controllers;
 
 [Authorize]
 [ApiController]
-[Route("api/profile")]
+[Route("profile")]
 public class ProfileController : ControllerBase
 {
     private readonly IMediator _mediator;

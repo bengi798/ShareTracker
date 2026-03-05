@@ -21,7 +21,7 @@ namespace ShareTracker.API.Controllers;
 
 [Authorize]
 [ApiController]
-[Route("api/trades")]
+[Route("trades")]
 public class TradesController : ControllerBase
 {
     private readonly IMediator _mediator;
