@@ -13,6 +13,8 @@ import {
   type PropertyPosition,
 } from '@/lib/positions';
 import { useForexRates } from '@/hooks/useForexRates';
+import { useLiveQuotes } from '@/hooks/useLiveQuotes';
+import { useIsInvestor } from '@/lib/auth/usePlan';
 
 // ── Currency helpers ──────────────────────────────────────────────────
 function normCurrency(c: string): string {
@@ -307,16 +309,31 @@ export function PortfolioView({
   quotesLoading: boolean;
   homeCurrency:  string;
 }) {
+  const isInvestor = useIsInvestor();
   const positions: AllPositions = useMemo(() => computePositions(trades), [trades]);
 
-  const sharesQuotes = useMemo(
-    () => quotes.filter((q): q is SharesQuote => q.assetType === 'Shares'),
-    [quotes],
+  // ── Price mode: EOD (default) or Live (Investor only) ───────────────
+  const [priceMode, setPriceMode] = useState<'eod' | 'live'>('eod');
+
+  const { liveShares, liveCrypto, liveLoading } = useLiveQuotes(
+    positions.shares,
+    positions.crypto,
+    priceMode === 'live',
   );
-  const cryptoQuotes = useMemo(
-    () => quotes.filter((q): q is CryptoQuote => q.assetType === 'Crypto'),
-    [quotes],
-  );
+
+  const sharesQuotes = useMemo((): SharesQuote[] =>
+    priceMode === 'live'
+      ? liveShares
+      : quotes.filter((q): q is SharesQuote => q.assetType === 'Shares'),
+  [priceMode, liveShares, quotes]);
+
+  const cryptoQuotes = useMemo((): CryptoQuote[] =>
+    priceMode === 'live'
+      ? liveCrypto
+      : quotes.filter((q): q is CryptoQuote => q.assetType === 'Crypto'),
+  [priceMode, liveCrypto, quotes]);
+
+  const effectiveQuotesLoading = priceMode === 'live' ? liveLoading : quotesLoading;
 
   // ── Display mode ────────────────────────────────────────────────────
   // 'home' = convert all to homeCurrency | '<CODE>' = filter to that currency only
@@ -426,6 +443,39 @@ export function PortfolioView({
   return (
     <div className="space-y-4">
 
+      {/* ── Price mode toggle ──────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm font-medium text-gray-500">Prices:</span>
+        <button
+          onClick={() => setPriceMode('eod')}
+          className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+            priceMode === 'eod'
+              ? 'bg-gray-900 text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          EOD
+        </button>
+        <button
+          onClick={() => isInvestor && setPriceMode('live')}
+          title={isInvestor ? undefined : 'Investor plan required'}
+          className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+            priceMode === 'live'
+              ? 'bg-gray-900 text-white'
+              : isInvestor
+              ? 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              : 'cursor-not-allowed bg-gray-100 text-gray-400'
+          }`}
+        >
+          Live
+          {!isInvestor && (
+            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+            </svg>
+          )}
+        </button>
+      </div>
+
       {/* ── Display toggle ─────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm font-medium text-gray-500">Display:</span>
@@ -494,7 +544,7 @@ export function PortfolioView({
         <SharesCategorySection
           positions={visibleShares}
           quotes={sharesQuotes}
-          quotesLoading={quotesLoading}
+          quotesLoading={effectiveQuotesLoading}
           displayMode={displayMode}
           homeCurrency={homeCurrency}
           rates={rates}
