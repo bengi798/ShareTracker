@@ -144,7 +144,7 @@ export function DividendsView({ trades }: { trades: Trade[] }) {
     setError(null);
     setDividends([]);
 
-    fetch(`/api/dividends/${selectedOption.symbol}?from=${selectedOption.firstBuyDate}`)
+    fetch(`/eodhd/dividends/${selectedOption.symbol}?from=${selectedOption.firstBuyDate}`)
       .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();

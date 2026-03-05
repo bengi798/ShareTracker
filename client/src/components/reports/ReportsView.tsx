@@ -320,7 +320,7 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
 
     Promise.all(
       activeShares.map(share =>
-        fetch(`/api/dividends/${share.symbol}?from=${from}`)
+        fetch(`/eodhd/dividends/${share.symbol}?from=${from}`)
           .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status} for ${share.symbol}`)))
           .then((data: DividendRecord[]) =>
             (Array.isArray(data) ? data : [])
