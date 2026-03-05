@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Fragment } from 'react';
 import type { Trade, SharesTrade, GoldTrade, CryptoTrade, BondTrade, PropertyTrade } from '@/lib/types';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { reportsApi } from '@/lib/api/reports';
@@ -16,6 +16,20 @@ function fmtDate(dateStr: string) {
   return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-AU', {
     day: '2-digit', month: 'short', year: 'numeric',
   });
+}
+function fmtMoney(n: number, currency: string) {
+  try {
+    return n.toLocaleString('en-AU', { style: 'currency', currency, currencyDisplay: 'narrowSymbol', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  } catch {
+    return `${n.toFixed(2)} ${currency}`;
+  }
+}
+function fmtMoneyPrecise(n: number, currency: string) {
+  try {
+    return n.toLocaleString('en-AU', { style: 'currency', currency, currencyDisplay: 'narrowSymbol', minimumFractionDigits: 4, maximumFractionDigits: 6 });
+  } catch {
+    return `${n.toFixed(6)} ${currency}`;
+  }
 }
 
 // ── Australian Financial Year helpers ──────────────────────────────────
@@ -69,6 +83,60 @@ function getBrokerageFees(trade: Trade): number {
     return (trade as SharesTrade | CryptoTrade).brokerageFees ?? 0;
   }
   return 0;
+}
+
+// ── Dividend helpers ────────────────────────────────────────────────────
+const EXCHANGE_CODES: Record<string, string> = {
+  ASX: 'AU', NYSE: 'US', NASDAQ: 'US', LSE: 'LSE', TSX: 'TO',
+};
+
+interface DividendRecord {
+  date:        string;
+  paymentDate: string | null;
+  period:      string;
+  franking:    string | null;
+  value:       number;
+  currency:    string;
+}
+
+interface FYDividendRow {
+  ticker:         string | null;
+  exchange:       string | null;
+  date:           string | null;
+  paymentDate:    string | null;
+  period:         string | null;
+  franking:       string | null;
+  value:          number | null;
+  currency:       string | null;
+  unitsHeld:      number | null;
+  totalDividend:  number | null;
+  frankingCredit: number | null;
+}
+
+interface ActiveShare {
+  ticker:   string | null;
+  exchange: string | null;
+  symbol:   string | null;
+  trades:   SharesTrade[];
+}
+
+function parseFranking(franking: string | null | undefined): number {
+  if (!franking) return 0;
+  const m = franking.match(/(\d+(?:\.\d+)?)/);
+  return m ? parseFloat(m[1]) / 100 : 0;
+}
+
+// ((dividend ÷ (1 – 0.3)) – dividend) × franking%
+function calcFrankingCredit(dividendAmount: number, franking: string | null | undefined): number {
+  const fp = parseFranking(franking);
+  if (fp === 0) return 0;
+  return ((dividendAmount / (1 - 0.3)) - dividendAmount) * fp;
+}
+
+function computeShareUnitsAt(trades: SharesTrade[], date: string): number {
+  return trades
+    .filter(t => t.dateOfTrade <= date)
+    .reduce((sum, t) => sum + (t.tradeType === 'Buy' ? t.numberOfUnits : -t.numberOfUnits), 0);
 }
 
 // ── Sell metrics (FIFO lot-based CGT calculation) ─────────────────────
@@ -189,6 +257,129 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
   const [selectedFY, setSelectedFY] = useState<number | null>(null);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [exportingCsv, setExportingCsv] = useState(false);
+
+  // ── Dividend data ──────────────────────────────────────────────────────
+  const [fyDividends, setFyDividends]           = useState<FYDividendRow[]>([]);
+  const [dividendsLoading, setDividendsLoading] = useState(false);
+  const [dividendsError, setDividendsError]     = useState<string | null>(null);
+
+  useEffect(() => {
+    if (selectedFY === null) return;
+
+    // Compute active shares inline to avoid a separate useMemo dep that
+    // creates a new array reference and re-triggers this effect prematurely.
+    const fyStartDate = fyStart(selectedFY);
+    const fyEndDate   = fyEnd(selectedFY);
+
+    const shareMap = new Map<string, SharesTrade[]>();
+    for (const t of trades) {
+      if (t.assetType !== 'Shares') continue;
+      const st  = t as SharesTrade;
+      const key = `${st.ticker.toUpperCase()}|${st.exchange}`;
+      if (!shareMap.has(key)) shareMap.set(key, []);
+      shareMap.get(key)!.push(st);
+    }
+
+    const activeShares: ActiveShare[] = [];
+    for (const tList of Array.from(shareMap.values())) {
+      const sorted   = [...tList].sort((a, b) =>
+        a.dateOfTrade.localeCompare(b.dateOfTrade) || a.createdAt.localeCompare(b.createdAt),
+      );
+      const firstBuy = sorted.find(t => t.tradeType === 'Buy');
+      if (!firstBuy || firstBuy.dateOfTrade > fyEndDate) continue;
+
+      const unitsAtFyStart = sorted
+        .filter(t => t.dateOfTrade < fyStartDate)
+        .reduce((sum, t) => sum + (t.tradeType === 'Buy' ? t.numberOfUnits : -t.numberOfUnits), 0);
+      const boughtDuringFY = sorted.some(
+        t => t.tradeType === 'Buy' && t.dateOfTrade >= fyStartDate && t.dateOfTrade <= fyEndDate,
+      );
+      if (unitsAtFyStart <= 0 && !boughtDuringFY) continue;
+
+      const ticker       = firstBuy.ticker.toUpperCase();
+      const exchangeCode = EXCHANGE_CODES[firstBuy.exchange];
+      if (!exchangeCode) continue;
+
+      activeShares.push({ ticker, exchange: firstBuy.exchange, symbol: `${ticker}.${exchangeCode}`, trades: sorted });
+    }
+
+    if (activeShares.length === 0) {
+      setFyDividends([]);
+      setDividendsError(null);
+      setDividendsLoading(false);
+      return;
+    }
+
+    setDividendsLoading(true);
+    setFyDividends([]);
+    setDividendsError(null);
+
+    const from = fyStart(selectedFY);
+    const to   = fyEnd(selectedFY);
+    let cancelled = false;
+
+    Promise.all(
+      activeShares.map(share =>
+        fetch(`/api/dividends/${share.symbol}?from=${from}`)
+          .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status} for ${share.symbol}`)))
+          .then((data: DividendRecord[]) =>
+            (Array.isArray(data) ? data : [])
+              .filter(d => d.date >= from && d.date <= to)
+              .map(d => {
+                const unitsHeld     = computeShareUnitsAt(share.trades, d.date);
+                const totalDividend = d.value * unitsHeld;
+                return {
+                  ticker:         share.ticker,
+                  exchange:       share.exchange,
+                  date:           d.date,
+                  paymentDate:    d.paymentDate,
+                  period:         d.period,
+                  franking:       d.franking,
+                  value:          d.value,
+                  currency:       d.currency,
+                  unitsHeld,
+                  totalDividend,
+                  frankingCredit: calcFrankingCredit(totalDividend, d.franking),
+                };
+              }),
+          )
+          .catch((err: unknown) => {
+            console.warn('Dividend fetch failed for', share.symbol, err);
+            return [] as FYDividendRow[];
+          }),
+      ),
+    )
+      .then(results => {
+        if (cancelled) return;
+        setFyDividends(
+          results.flat().sort((a, b) => {
+            console.log('Comparing dividends', a, b);
+            return a.date.localeCompare(b.date) || a.ticker.localeCompare(b.ticker);
+          }),
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setDividendsError('Failed to load dividend data. Please try again.');
+      })
+      .finally(() => {
+        if (!cancelled) setDividendsLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [trades, selectedFY]);
+
+  const dividendTotals = useMemo(() => {
+    const byCurrency = new Map<string, { dividends: number; frankingCredits: number }>();
+    for (const row of fyDividends) {
+      if (row.unitsHeld <= 0) continue;
+      const curr = byCurrency.get(row.currency) ?? { dividends: 0, frankingCredits: 0 };
+      byCurrency.set(row.currency, {
+        dividends:       curr.dividends + row.totalDividend,
+        frankingCredits: curr.frankingCredits + row.frankingCredit,
+      });
+    }
+    return byCurrency;
+  }, [fyDividends]);
 
   async function handleExport(format: 'pdf' | 'csv') {
     if (selectedFY === null || !token) return;
@@ -463,6 +654,138 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
           </div>
         </div>
       )}
+
+      {/* ── Dividends ────────────────────────────────────────────────── */}
+      <div className="border-t border-gray-200 pt-2">
+        <div className="mb-4">
+          <h2 className="text-base font-semibold text-gray-900">Dividends</h2>
+          <p className="mt-0.5 text-sm text-gray-500">
+            Dividends received on shares held during FY{selectedFY}, including franking credits (30% corporate tax rate).
+          </p>
+        </div>
+
+        {dividendsLoading && (
+          <div className="flex items-center gap-2 py-6 text-sm text-gray-500">
+            <svg className="h-4 w-4 animate-spin text-indigo-500" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+            </svg>
+            Loading dividend data…
+          </div>
+        )}
+
+        {dividendsError && (
+          <div className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">{dividendsError}</div>
+        )}
+
+        {!dividendsLoading && !dividendsError && fyDividends.length === 0 && (
+          <div className="rounded-xl border border-dashed border-gray-300 py-10 text-center">
+            <p className="text-sm text-gray-500">No dividends found for shares held in FY{selectedFY}.</p>
+          </div>
+        )}
+
+        {!dividendsLoading && !dividendsError && fyDividends.length > 0 && (
+          <div className="space-y-4">
+            {/* Summary — only rows where units were actually held */}
+            {dividendTotals.size > 0 && (
+              <div className="flex flex-wrap gap-10 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+                {Array.from(dividendTotals.entries()).map(([currency, totals]) => (
+                  <Fragment key={currency}>
+                    <div>
+                      <p className="text-sm text-gray-500">Total Dividends ({currency})</p>
+                      <p className="mt-1 text-2xl font-bold text-gray-900">
+                        {fmtMoney(totals.dividends, currency)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">
+                        Total Franking Credits ({currency})
+                        <span className="ml-1.5 rounded bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-700">
+                          30% tax rate
+                        </span>
+                      </p>
+                      <p className="mt-1 text-2xl font-bold text-green-700">
+                        {fmtMoney(totals.frankingCredits, currency)}
+                      </p>
+                    </div>
+                  </Fragment>
+                ))}
+              </div>
+            )}
+
+            {/* Table — shows all dividend events; rows with 0 units are grayed out */}
+            <div className="overflow-hidden rounded-lg border border-gray-200">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-100 bg-white text-sm">
+                  <thead>
+                    <tr className="text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                      <th className="px-4 py-3">Share</th>
+                      <th className="px-4 py-3">Ex-Date</th>
+                      <th className="px-4 py-3">Payment Date</th>
+                      <th className="px-4 py-3">Period</th>
+                      <th className="px-4 py-3 text-right">Units Held</th>
+                      <th className="px-4 py-3 text-right">Per Share</th>
+                      <th className="px-4 py-3 text-right">Total Dividend</th>
+                      <th className="px-4 py-3 text-right">Franking</th>
+                      <th className="px-4 py-3 text-right">Franking Credit</th>
+                      <th className="px-4 py-3 text-right">Currency</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {fyDividends.map((d, i) => (
+                      <tr key={i} className={`hover:bg-gray-50 ${d.unitsHeld === 0 ? 'opacity-40' : ''}`}>
+                        <td className="px-4 py-3 font-medium text-gray-900">
+                          {d.ticker} · {d.exchange}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-gray-600">
+                          {fmtDate(d.date)}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-gray-600">
+                          {d.paymentDate ? fmtDate(d.paymentDate) : '—'}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">
+                            {d.period}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-700">
+                          {d.unitsHeld > 0 ? d.unitsHeld.toLocaleString() : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-700">
+                          {fmtMoneyPrecise(d.value, d.currency)}
+                        </td>
+                        <td className="px-4 py-3 text-right font-medium text-gray-900">
+                          {d.unitsHeld > 0 ? fmtMoney(d.totalDividend, d.currency) : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {d.franking && d.franking !== '0%' ? (
+                            <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                              {d.franking}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">0%</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right font-medium text-green-700">
+                          {d.unitsHeld > 0 && d.frankingCredit > 0 ? fmtMoney(d.frankingCredit, d.currency) : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-500">
+                          {d.currency}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            {fyDividends.some(d => d.unitsHeld === 0) && (
+              <p className="text-xs text-gray-400">
+                Grayed rows: dividend ex-date occurred before you held shares.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
