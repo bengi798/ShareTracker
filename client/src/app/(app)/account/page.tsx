@@ -15,10 +15,10 @@ const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000';
 
 type ThemePref = 'light' | 'dark' | 'system';
 
-const THEME_OPTIONS: { value: ThemePref; label: string; icon: string }[] = [
-  { value: 'light',  label: 'Light',  icon: '☀️' },
-  { value: 'dark',   label: 'Dark',   icon: '🌙' },
-  { value: 'system', label: 'System', icon: '💻' },
+const THEME_OPTIONS: { value: ThemePref; label: string;}[] = [
+  { value: 'light',  label: 'Light'},
+  { value: 'dark',   label: 'Dark'},
+  { value: 'system', label: 'System'},
 ];
 
 export default function AccountPage() {
@@ -158,7 +158,6 @@ export default function AccountPage() {
                       : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
                   }`}
                 >
-                  <span>{opt.icon}</span>
                   {opt.label}
                 </button>
               ))}

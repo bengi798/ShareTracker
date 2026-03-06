@@ -206,7 +206,7 @@ function SharesCategorySection({
                     }`}>
                       {lc ? (
                         <span className="flex flex-col items-end">
-                          <span>{lc.change >= 0 ? '+' : ''}{fmtVal(lc.change, p.currency)}</span>
+                          <span>{lc.change >= 0 ? '+' : ''}{fmtVal(lc.change*p.availableUnits, p.currency)}</span>
                           <span className="text-xs">{lc.changePercent >= 0 ? '+' : ''}{lc.changePercent.toFixed(2)}%</span>
                         </span>
                       ) : '—'}

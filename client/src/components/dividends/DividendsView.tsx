@@ -173,9 +173,9 @@ export function DividendsView({ trades }: { trades: Trade[] }) {
 
   if (shareOptions.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-gray-300 py-16 text-center">
-        <p className="text-base font-medium text-gray-500">No shares trades recorded yet.</p>
-        <p className="mt-1 text-sm text-gray-400">Add a shares trade to see dividend history.</p>
+      <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 py-16 text-center">
+        <p className="text-base font-medium text-gray-500 dark:text-gray-400">No shares trades recorded yet.</p>
+        <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">Add a shares trade to see dividend history.</p>
       </div>
     );
   }
@@ -184,7 +184,7 @@ export function DividendsView({ trades }: { trades: Trade[] }) {
     <div className="space-y-6">
       {/* Share selector */}
       <div className="flex flex-wrap items-center gap-3">
-        <label htmlFor="share-select" className="text-sm font-medium text-gray-700">
+        <label htmlFor="share-select" className="text-sm font-medium text-gray-700 dark:text-gray-300">
           Share
         </label>
         <select
@@ -195,7 +195,7 @@ export function DividendsView({ trades }: { trades: Trade[] }) {
             setDividends([]);
             setError(null);
           }}
-          className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          className="rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
         >
           {shareOptions.map(o => (
             <option key={`${o.ticker}|${o.exchange}`} value={`${o.ticker}|${o.exchange}`}>
@@ -207,7 +207,7 @@ export function DividendsView({ trades }: { trades: Trade[] }) {
 
       {/* Ownership period note */}
       {selectedOption && (
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
           Showing dividends from{' '}
           <span className="font-medium">{fmtDate(selectedOption.firstBuyDate)}</span>
           {' '}to{' '}
@@ -218,12 +218,12 @@ export function DividendsView({ trades }: { trades: Trade[] }) {
       {loading && <Spinner />}
 
       {error && (
-        <div className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+        <div className="rounded-md bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">{error}</div>
       )}
 
       {!loading && !error && dividends.length === 0 && selectedOption && (
-        <div className="rounded-xl border border-dashed border-gray-300 py-12 text-center">
-          <p className="text-sm text-gray-500">
+        <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 py-12 text-center">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             No dividends found for {selectedOption.ticker} during the ownership period.
           </p>
         </div>
@@ -232,15 +232,15 @@ export function DividendsView({ trades }: { trades: Trade[] }) {
       {!loading && !error && dividends.length > 0 && (
         <>
           {/* Summary card */}
-          <div className="flex flex-wrap gap-10 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-wrap gap-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm">
             <div>
-              <p className="text-sm text-gray-500">Dividend Events</p>
-              <p className="mt-1 text-2xl font-bold text-gray-900">{dividends.length}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Dividend Events</p>
+              <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{dividends.length}</p>
             </div>
             {Array.from(totalsByCurrency.entries()).map(([currency, total]) => (
               <div key={currency}>
-                <p className="text-sm text-gray-500">Total Received ({currency})</p>
-                <p className="mt-1 text-2xl font-bold text-gray-900">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Total Received ({currency})</p>
+                <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
                   {fmtTotal(total, currency)}
                 </p>
               </div>
@@ -248,11 +248,11 @@ export function DividendsView({ trades }: { trades: Trade[] }) {
           </div>
 
           {/* Dividends table */}
-          <div className="overflow-hidden rounded-lg border border-gray-200">
+          <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-100 bg-white text-sm">
+              <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800 text-sm">
                 <thead>
-                  <tr className="text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                  <tr className="text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
                     <th className="px-4 py-3">Ex-Date</th>
                     <th className="px-4 py-3">Payment Date</th>
                     <th className="px-4 py-3">Period</th>
@@ -263,44 +263,44 @@ export function DividendsView({ trades }: { trades: Trade[] }) {
                     <th className="px-4 py-3 text-right">Currency</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
                   {dividends.map((d, i) => {
                     const units = selectedOption
                       ? computeUnitsAt(selectedOption.trades, d.date)
                       : 0;
                     const total = d.value * units;
                     return (
-                      <tr key={i} className="hover:bg-gray-50">
-                        <td className="whitespace-nowrap px-4 py-3 text-gray-600">
+                      <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                        <td className="whitespace-nowrap px-4 py-3 text-gray-600 dark:text-gray-400">
                           {fmtDate(d.date)}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-gray-600">
+                        <td className="whitespace-nowrap px-4 py-3 text-gray-600 dark:text-gray-400">
                           {d.paymentDate ? fmtDate(d.paymentDate) : '—'}
                         </td>
                         <td className="px-4 py-3">
-                          <span className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">
+                          <span className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300">
                             {d.period}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-right font-medium text-gray-900">
+                        <td className="px-4 py-3 text-right font-medium text-gray-900 dark:text-gray-100">
                           {fmtPerShare(d.value, d.currency)}
                         </td>
                         <td className="px-4 py-3 text-right">
                           {d.franking && d.franking !== '0%' ? (
-                            <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                            <span className="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/30 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">
                               {d.franking}
                             </span>
                           ) : (
-                            <span className="text-gray-400">0%</span>
+                            <span className="text-gray-400 dark:text-gray-500">0%</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right text-gray-700">
+                        <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">
                           {units > 0 ? units.toLocaleString() : '—'}
                         </td>
-                        <td className="px-4 py-3 text-right font-medium text-gray-900">
+                        <td className="px-4 py-3 text-right font-medium text-gray-900 dark:text-gray-100">
                           {units > 0 ? fmtTotal(total, d.currency) : '—'}
                         </td>
-                        <td className="px-4 py-3 text-right text-gray-500">
+                        <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">
                           {d.currency}
                         </td>
                       </tr>
