@@ -243,9 +243,46 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
   const excludedCount = trades.length - audTrades.length;
 
   const availableFYs = useMemo(() => {
-    const years = new Set(audTrades.map(t => tradeFinancialYear(t.dateOfTrade)));
+    const currentDate = new Date().toISOString().slice(0, 10);
+    const currentFY   = tradeFinancialYear(currentDate);
+    const years       = new Set<number>();
+
+    // Include all FYs with trades
+    for (const t of audTrades) {
+      years.add(tradeFinancialYear(t.dateOfTrade));
+    }
+
+    // Also include all FYs where any share was held (for dividend visibility)
+    const shareMap = new Map<string, SharesTrade[]>();
+    for (const t of trades) {
+      if (t.assetType !== 'Shares') continue;
+      const st  = t as SharesTrade;
+      const key = `${st.ticker.toUpperCase()}|${st.exchange}`;
+      if (!shareMap.has(key)) shareMap.set(key, []);
+      shareMap.get(key)!.push(st);
+    }
+
+    for (const tList of Array.from(shareMap.values())) {
+      const sorted   = [...tList].sort((a, b) =>
+        a.dateOfTrade.localeCompare(b.dateOfTrade) || a.createdAt.localeCompare(b.createdAt),
+      );
+      const firstBuy = sorted.find(t => t.tradeType === 'Buy');
+      if (!firstBuy) continue;
+
+      const firstBuyFY = tradeFinancialYear(firstBuy.dateOfTrade);
+      for (let fy = firstBuyFY; fy <= currentFY; fy++) {
+        const startDate    = fyStart(fy);
+        const endDate      = fyEnd(fy);
+        const unitsAtStart = computeShareUnitsAt(sorted, startDate);
+        const boughtInFY   = sorted.some(
+          t => t.tradeType === 'Buy' && t.dateOfTrade > startDate && t.dateOfTrade <= endDate,
+        );
+        if (unitsAtStart > 0 || boughtInFY) years.add(fy);
+      }
+    }
+
     return Array.from(years).sort((a, b) => b - a);
-  }, [audTrades]);
+  }, [audTrades, trades]);
 
   const [selectedFY, setSelectedFY] = useState<number | null>(null);
   const [exportingPdf, setExportingPdf] = useState(false);
