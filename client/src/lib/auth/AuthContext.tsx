@@ -9,6 +9,7 @@ interface AuthContextValue {
   email:             string | null;
   homeCurrency:      string | null;
   isForeignResident: boolean | null;
+  themePreference:   string | null;
   isLoading:         boolean;
   logout:            () => void;
   refreshProfile:    () => void;
@@ -22,14 +23,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken]                         = useState<string | null>(null);
   const [homeCurrency, setHomeCurrency]           = useState<string | null>(null);
   const [isForeignResident, setIsForeignResident] = useState<boolean | null>(null);
+  const [themePreference, setThemePreference]     = useState<string | null>(null);
   const [profileLoaded, setProfileLoaded]         = useState(false);
 
-  // Keep a fresh JWT in state; Clerk tokens expire after 60 s so refresh every 55 s
   useEffect(() => {
     if (!clerkLoaded || !userId) {
       setToken(null);
       setHomeCurrency(null);
       setIsForeignResident(null);
+      setThemePreference(null);
       setProfileLoaded(false);
       return;
     }
@@ -49,20 +51,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [clerkLoaded, userId, getToken]);
 
-  // Fetch app-specific profile once per session (or when refreshProfile() is called)
   useEffect(() => {
     if (!token || profileLoaded) return;
 
     const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000';
-    fetch(`${API}/profile`, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${API}/api/profile`, { headers: { Authorization: `Bearer ${token}` } })
       .then(res => (res.ok ? res.json() : null))
       .then(data => {
         setHomeCurrency(data?.homeCurrency ?? null);
         setIsForeignResident(data?.isForeignResident ?? null);
+        setThemePreference(data?.themePreference ?? 'system');
       })
       .catch(() => {
         setHomeCurrency(null);
         setIsForeignResident(null);
+        setThemePreference('system');
       })
       .finally(() => setProfileLoaded(true));
   }, [token, profileLoaded]);
@@ -74,7 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ token, userId: userId ?? null, email, homeCurrency, isForeignResident, isLoading, logout, refreshProfile }}
+      value={{ token, userId: userId ?? null, email, homeCurrency, isForeignResident, themePreference, isLoading, logout, refreshProfile }}
     >
       {children}
     </AuthContext.Provider>

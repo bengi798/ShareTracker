@@ -33,7 +33,6 @@ function fmtMoneyPrecise(n: number, currency: string) {
 }
 
 // ── Australian Financial Year helpers ──────────────────────────────────
-// FY2025 = 1 July 2024 – 30 June 2025
 function tradeFinancialYear(dateStr: string): number {
   const [year, month] = dateStr.split('-').map(Number);
   return month >= 7 ? year + 1 : year;
@@ -41,7 +40,7 @@ function tradeFinancialYear(dateStr: string): number {
 function fyStart(fy: number) { return `${fy - 1}-07-01`; }
 function fyEnd(fy: number)   { return `${fy}-06-30`; }
 
-// ── Asset key (mirrors positions.ts keying scheme) ─────────────────────
+// ── Asset key ──────────────────────────────────────────────────────────
 function assetKey(trade: Trade): string {
   switch (trade.assetType) {
     case 'Shares':   return `Shares|${(trade as SharesTrade).ticker.toUpperCase()}|${(trade as SharesTrade).exchange}`;
@@ -126,7 +125,6 @@ function parseFranking(franking: string | null | undefined): number {
   return m ? parseFloat(m[1]) / 100 : 0;
 }
 
-// ((dividend ÷ (1 – 0.3)) – dividend) × franking%
 function calcFrankingCredit(dividendAmount: number, franking: string | null | undefined): number {
   const fp = parseFranking(franking);
   if (fp === 0) return 0;
@@ -144,16 +142,13 @@ interface SellMetrics {
   costBasis:                 number;
   proceeds:                  number;
   gainLoss:                  number;
-  cgtDiscountApplies:        boolean; // true if any lot qualifies for 50% discount
-  discountedGain:            number;  // total taxable gain after applying discounts
-  isSplit:                   boolean; // some lots discounted, some not
-  splitDiscountedTaxable:    number;  // taxable gain from discounted lots (gross × 50%)
-  splitNonDiscountedTaxable: number;  // full gain/loss from non-discounted lots
+  cgtDiscountApplies:        boolean;
+  discountedGain:            number;
+  isSplit:                   boolean;
+  splitDiscountedTaxable:    number;
+  splitNonDiscountedTaxable: number;
 }
 
-// Processes all AUD trades using FIFO lot tracking so that when a sale spans
-// buy lots with different holding periods, the 50% CGT discount is applied
-// only to the portion held for more than 12 months.
 function computeAllSellMetrics(allTrades: Trade[]): Map<string, SellMetrics> {
   const byAsset = new Map<string, Trade[]>();
   for (const trade of allTrades) {
@@ -170,7 +165,6 @@ function computeAllSellMetrics(allTrades: Trade[]): Map<string, SellMetrics> {
       a.createdAt.localeCompare(b.createdAt),
     );
 
-    // FIFO lot pool: tracks remaining units and cost-per-unit (including brokerage)
     const lots: { date: string; costPerUnit: number; remaining: number }[] = [];
 
     for (const trade of sorted) {
@@ -190,8 +184,8 @@ function computeAllSellMetrics(allTrades: Trade[]): Map<string, SellMetrics> {
 
         let unitsToSell          = trade.numberOfUnits;
         let totalCostBasis       = 0;
-        let discountedTaxable    = 0; // gain × 0.5 for lots held > 12 months
-        let nonDiscountedTaxable = 0; // full gain/loss for lots held ≤ 12 months
+        let discountedTaxable    = 0;
+        let nonDiscountedTaxable = 0;
         let anyDiscount          = false;
         let anyNonDiscount       = false;
 
@@ -242,7 +236,6 @@ function computeAllSellMetrics(allTrades: Trade[]): Map<string, SellMetrics> {
 // ── Main component ─────────────────────────────────────────────────────
 export function ReportsView({ trades }: { trades: Trade[] }) {
   const { token } = useAuth();
-  // Only AUD-denominated trades are included in capital gains calculations.
   const audTrades = useMemo(
     () => trades.filter(t => !t.currency || t.currency === 'AUD'),
     [trades],
@@ -258,7 +251,6 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
   const [exportingPdf, setExportingPdf] = useState(false);
   const [exportingCsv, setExportingCsv] = useState(false);
 
-  // ── Dividend data ──────────────────────────────────────────────────────
   const [fyDividends, setFyDividends]           = useState<FYDividendRow[]>([]);
   const [dividendsLoading, setDividendsLoading] = useState(false);
   const [dividendsError, setDividendsError]     = useState<string | null>(null);
@@ -266,8 +258,6 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
   useEffect(() => {
     if (selectedFY === null) return;
 
-    // Compute active shares inline to avoid a separate useMemo dep that
-    // creates a new array reference and re-triggers this effect prematurely.
     const fyStartDate = fyStart(selectedFY);
     const fyEndDate   = fyEnd(selectedFY);
 
@@ -387,7 +377,7 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
     try {
       await reportsApi.export(selectedFY, format, token);
     } catch {
-      // silently ignore — the download simply won't happen
+      // silently ignore
     } finally {
       setExporting(false);
     }
@@ -406,10 +396,8 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
       .sort((a, b) => a.dateOfTrade.localeCompare(b.dateOfTrade));
   }, [audTrades, selectedFY]);
 
-  // Compute FIFO metrics across all FYs so lot pools carry over correctly
   const allSellMetrics = useMemo(() => computeAllSellMetrics(audTrades), [audTrades]);
 
-  // Filter to the selected FY's sells for display and summary calculations
   const sellMetrics = useMemo(() => {
     const map = new Map<string, SellMetrics>();
     if (selectedFY === null) return map;
@@ -430,9 +418,9 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
 
   if (availableFYs.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-gray-300 py-16 text-center">
-        <p className="text-base font-medium text-gray-500">No trades recorded yet.</p>
-        <p className="mt-1 text-sm text-gray-400">Add a trade to generate a financial year report.</p>
+      <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 py-16 text-center">
+        <p className="text-base font-medium text-gray-500 dark:text-gray-400">No trades recorded yet.</p>
+        <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">Add a trade to generate a financial year report.</p>
       </div>
     );
   }
@@ -441,14 +429,14 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
     <div className="space-y-6">
       {/* FY selector + export buttons */}
       <div className="flex flex-wrap items-center gap-3">
-        <label htmlFor="fy-select" className="text-sm font-medium text-gray-700">
+        <label htmlFor="fy-select" className="text-sm font-medium text-gray-700 dark:text-gray-300">
           Financial year
         </label>
         <select
           id="fy-select"
           value={selectedFY ?? ''}
           onChange={e => setSelectedFY(Number(e.target.value))}
-          className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          className="rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
         >
           {availableFYs.map(fy => (
             <option key={fy} value={fy}>FY{fy}</option>
@@ -459,7 +447,7 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
           <button
             onClick={() => handleExport('csv')}
             disabled={exportingCsv || selectedFY === null}
-            className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {exportingCsv ? (
               <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
@@ -495,25 +483,25 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
       </div>
 
       {/* Summary card */}
-      <div className="flex flex-wrap gap-10 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+      <div className="flex flex-wrap gap-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm">
         <div>
-          <p className="text-sm text-gray-500">Total Proceeds</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900">
+          <p className="text-sm text-gray-500 dark:text-gray-400">Total Proceeds</p>
+          <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
             {hasSells ? fmtCurrency(totalProceeds) : '—'}
           </p>
         </div>
         <div>
-          <p className="text-sm text-gray-500">Total Cost Basis</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900">
+          <p className="text-sm text-gray-500 dark:text-gray-400">Total Cost Basis</p>
+          <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
             {hasSells ? fmtCurrency(totalCostBasis) : '—'}
           </p>
         </div>
         <div>
-          <p className="text-sm text-gray-500">Gross Capital Gain / (Loss)</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Gross Capital Gain / (Loss)</p>
           <p className={`mt-1 text-2xl font-bold ${
             !hasSells          ? 'text-gray-400'
-            : netGainLoss > 0  ? 'text-green-600'
-            : netGainLoss < 0  ? 'text-red-600'
+            : netGainLoss > 0  ? 'text-green-600 dark:text-green-400'
+            : netGainLoss < 0  ? 'text-red-600 dark:text-red-400'
             :                    'text-gray-400'
           }`}>
             {!hasSells
@@ -522,18 +510,18 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
           </p>
         </div>
         <div>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             Taxable Gain
             {anyDiscountApplied && (
-              <span className="ml-1 rounded bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-700">
+              <span className="ml-1 rounded bg-green-100 dark:bg-green-900/40 px-1.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-300">
                 50% CGT discount applied
               </span>
             )}
           </p>
           <p className={`mt-1 text-2xl font-bold ${
             !hasSells               ? 'text-gray-400'
-            : netDiscountedGain > 0 ? 'text-green-600'
-            : netDiscountedGain < 0 ? 'text-red-600'
+            : netDiscountedGain > 0 ? 'text-green-600 dark:text-green-400'
+            : netDiscountedGain < 0 ? 'text-red-600 dark:text-red-400'
             :                         'text-gray-400'
           }`}>
             {!hasSells
@@ -544,7 +532,7 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
       </div>
 
       {/* AUD-only disclaimer */}
-      <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+      <div className="rounded-md border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
         <span className="font-semibold">AUD trades only.</span>{' '}
         This report includes only trades denominated in AUD. Capital gains on foreign-currency assets
         require separate foreign income calculations and are not shown here.
@@ -557,15 +545,15 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
 
       {/* Trades table */}
       {fyTrades.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-300 py-12 text-center">
-          <p className="text-sm text-gray-500">No trades recorded in FY{selectedFY}.</p>
+        <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 py-12 text-center">
+          <p className="text-sm text-gray-500 dark:text-gray-400">No trades recorded in FY{selectedFY}.</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-gray-200">
+        <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-100 bg-white text-sm">
+            <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800 text-sm">
               <thead>
-                <tr className="text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                <tr className="text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
                   <th className="px-4 py-3">Date</th>
                   <th className="px-4 py-3">Type</th>
                   <th className="px-4 py-3">Description</th>
@@ -577,44 +565,44 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
                   <th className="px-4 py-3 text-right">Taxable Gain</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
                 {fyTrades.map(trade => {
                   const metrics = trade.tradeType === 'Sell' ? sellMetrics.get(trade.id) : undefined;
                   return (
-                    <tr key={trade.id} className="hover:bg-gray-50">
-                      <td className="whitespace-nowrap px-4 py-3 text-gray-600">
+                    <tr key={trade.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
+                      <td className="whitespace-nowrap px-4 py-3 text-gray-600 dark:text-gray-400">
                         {fmtDate(trade.dateOfTrade)}
                       </td>
                       <td className="px-4 py-3">
                         {trade.tradeType === 'Buy' ? (
-                          <span className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">
+                          <span className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-900/40 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300">
                             BUY
                           </span>
                         ) : (
-                          <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+                          <span className="inline-flex items-center rounded-full bg-amber-50 dark:bg-amber-900/40 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
                             SELL
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 font-medium text-gray-900">
+                      <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
                         {tradeDescription(trade)}
                       </td>
-                      <td className="px-4 py-3 text-right text-gray-700">
+                      <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">
                         {fmtUnits(trade.numberOfUnits)}
                       </td>
-                      <td className="px-4 py-3 text-right text-gray-700">
+                      <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">
                         {fmtCurrency(trade.pricePerUnit)}
                       </td>
-                      <td className="px-4 py-3 text-right font-medium text-gray-900">
+                      <td className="px-4 py-3 text-right font-medium text-gray-900 dark:text-white">
                         {fmtCurrency(trade.totalValue)}
                       </td>
-                      <td className="px-4 py-3 text-right text-gray-700">
+                      <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">
                         {metrics ? fmtCurrency(metrics.costBasis) : '—'}
                       </td>
                       <td className={`px-4 py-3 text-right font-medium ${
                         !metrics               ? 'text-gray-400'
-                        : metrics.gainLoss >= 0 ? 'text-green-600'
-                        :                         'text-red-600'
+                        : metrics.gainLoss >= 0 ? 'text-green-600 dark:text-green-400'
+                        :                         'text-red-600 dark:text-red-400'
                       }`}>
                         {metrics
                           ? `${metrics.gainLoss >= 0 ? '+' : ''}${fmtCurrency(metrics.gainLoss)}`
@@ -622,23 +610,23 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
                       </td>
                       <td className={`px-4 py-3 text-right font-medium ${
                         !metrics                    ? 'text-gray-400'
-                        : metrics.discountedGain >= 0 ? 'text-green-600'
-                        :                               'text-red-600'
+                        : metrics.discountedGain >= 0 ? 'text-green-600 dark:text-green-400'
+                        :                               'text-red-600 dark:text-red-400'
                       }`}>
                         {metrics ? (
                           <span className="flex flex-col items-end gap-0.5">
                             <span>{`${metrics.discountedGain >= 0 ? '+' : ''}${fmtCurrency(metrics.discountedGain)}`}</span>
                             {metrics.isSplit ? (
                               <>
-                                <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-700">
+                                <span className="rounded bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
                                   Partial 50% CGT discount
                                 </span>
-                                <span className="text-xs text-gray-400">
+                                <span className="text-xs text-gray-400 dark:text-gray-500">
                                   {`${fmtCurrency(metrics.splitDiscountedTaxable)} discounted + ${fmtCurrency(metrics.splitNonDiscountedTaxable)} full`}
                                 </span>
                               </>
                             ) : metrics.cgtDiscountApplies ? (
-                              <span className="rounded bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-700">
+                              <span className="rounded bg-green-100 dark:bg-green-900/40 px-1.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-300">
                                 50% CGT discount
                               </span>
                             ) : null}
@@ -655,19 +643,19 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
       )}
 
       {/* ── Dividends ────────────────────────────────────────────────── */}
-      <div className="border-t border-gray-200 pt-2">
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-2">
         <div className="mb-4">
-          <h2 className="text-base font-semibold text-gray-900">Dividends</h2>
-          <p className="mt-0.5 text-sm text-gray-500">
+          <h2 className="text-base font-semibold text-gray-900 dark:text-white">Dividends</h2>
+          <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
             Dividends received on shares held during FY{selectedFY}, including franking credits.
           </p>
-          <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <p className="mt-2 rounded-md border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
             <span className="font-semibold">Franking credit note:</span> Credits are calculated assuming a <span className="font-semibold">30% corporate tax rate</span>. Some companies (base rate entities with aggregated turnover under $50M) may use a 25% rate instead — please consult your tax adviser.
           </p>
         </div>
 
         {dividendsLoading && (
-          <div className="flex items-center gap-2 py-6 text-sm text-gray-500">
+          <div className="flex items-center gap-2 py-6 text-sm text-gray-500 dark:text-gray-400">
             <svg className="h-4 w-4 animate-spin text-indigo-500" viewBox="0 0 24 24" fill="none">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
@@ -677,36 +665,35 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
         )}
 
         {dividendsError && (
-          <div className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">{dividendsError}</div>
+          <div className="rounded-md bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">{dividendsError}</div>
         )}
 
         {!dividendsLoading && !dividendsError && fyDividends.length === 0 && (
-          <div className="rounded-xl border border-dashed border-gray-300 py-10 text-center">
-            <p className="text-sm text-gray-500">No dividends found for shares held in FY{selectedFY}.</p>
+          <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 py-10 text-center">
+            <p className="text-sm text-gray-500 dark:text-gray-400">No dividends found for shares held in FY{selectedFY}.</p>
           </div>
         )}
 
         {!dividendsLoading && !dividendsError && fyDividends.length > 0 && (
           <div className="space-y-4">
-            {/* Summary — only rows where units were actually held */}
             {dividendTotals.size > 0 && (
-              <div className="flex flex-wrap gap-10 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+              <div className="flex flex-wrap gap-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm">
                 {Array.from(dividendTotals.entries()).map(([currency, totals]) => (
                   <Fragment key={currency}>
                     <div>
-                      <p className="text-sm text-gray-500">Total Dividends ({currency})</p>
-                      <p className="mt-1 text-2xl font-bold text-gray-900">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Total Dividends ({currency})</p>
+                      <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
                         {fmtMoney(totals.dividends, currency)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
                         Total Franking Credits ({currency})
-                        <span className="ml-1.5 rounded bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-700">
+                        <span className="ml-1.5 rounded bg-green-100 dark:bg-green-900/40 px-1.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-300">
                           30% tax rate
                         </span>
                       </p>
-                      <p className="mt-1 text-2xl font-bold text-green-700">
+                      <p className="mt-1 text-2xl font-bold text-green-700 dark:text-green-400">
                         {fmtMoney(totals.frankingCredits, currency)}
                       </p>
                     </div>
@@ -715,12 +702,11 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
               </div>
             )}
 
-            {/* Table — shows all dividend events; rows with 0 units are grayed out */}
-            <div className="overflow-hidden rounded-lg border border-gray-200">
+            <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-100 bg-white text-sm">
+                <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800 text-sm">
                   <thead>
-                    <tr className="text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                    <tr className="text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
                       <th className="px-4 py-3">Share</th>
                       <th className="px-4 py-3">Ex-Date</th>
                       <th className="px-4 py-3">Payment Date</th>
@@ -733,45 +719,45 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
                       <th className="px-4 py-3 text-right">Currency</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
                     {fyDividends.map((d, i) => (
-                      <tr key={i} className={`hover:bg-gray-50 ${d.unitsHeld === 0 ? 'opacity-40' : ''}`}>
-                        <td className="px-4 py-3 font-medium text-gray-900">
+                      <tr key={i} className={`hover:bg-gray-50 dark:hover:bg-gray-700/40 ${d.unitsHeld === 0 ? 'opacity-40' : ''}`}>
+                        <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
                           {d.ticker} · {d.exchange}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-gray-600">
+                        <td className="whitespace-nowrap px-4 py-3 text-gray-600 dark:text-gray-400">
                           {fmtDate(d.date)}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-gray-600">
+                        <td className="whitespace-nowrap px-4 py-3 text-gray-600 dark:text-gray-400">
                           {d.paymentDate ? fmtDate(d.paymentDate) : '—'}
                         </td>
                         <td className="px-4 py-3">
-                          <span className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">
+                          <span className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-900/40 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300">
                             {d.period}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-right text-gray-700">
+                        <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">
                           {d.unitsHeld > 0 ? d.unitsHeld.toLocaleString() : '—'}
                         </td>
-                        <td className="px-4 py-3 text-right text-gray-700">
+                        <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">
                           {fmtMoneyPrecise(d.value, d.currency)}
                         </td>
-                        <td className="px-4 py-3 text-right font-medium text-gray-900">
+                        <td className="px-4 py-3 text-right font-medium text-gray-900 dark:text-white">
                           {d.unitsHeld > 0 ? fmtMoney(d.totalDividend, d.currency) : '—'}
                         </td>
                         <td className="px-4 py-3 text-right">
                           {d.franking && d.franking !== '0%' ? (
-                            <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                            <span className="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/40 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-300">
                               {d.franking}
                             </span>
                           ) : (
-                            <span className="text-gray-400">0%</span>
+                            <span className="text-gray-400 dark:text-gray-500">0%</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right font-medium text-green-700">
+                        <td className="px-4 py-3 text-right font-medium text-green-700 dark:text-green-400">
                           {d.unitsHeld > 0 && d.frankingCredit > 0 ? fmtMoney(d.frankingCredit, d.currency) : '—'}
                         </td>
-                        <td className="px-4 py-3 text-right text-gray-500">
+                        <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">
                           {d.currency}
                         </td>
                       </tr>
@@ -781,7 +767,7 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
               </div>
             </div>
             {fyDividends.some(d => d.unitsHeld === 0) && (
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-gray-400 dark:text-gray-500">
                 Grayed rows: dividend ex-date occurred before you held shares.
               </p>
             )}

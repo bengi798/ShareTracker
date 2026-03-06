@@ -34,21 +34,23 @@ export function TradeTable({ trades, onDelete, onUpdate }: TradeTableProps) {
     <>
       <div className="space-y-4">
         {/* Filter tabs */}
-        <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-3">
+        <div className="flex flex-wrap gap-2 border-b border-gray-200 dark:border-gray-700 pb-3">
           {TABS.map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium transition-colors ${
                 activeTab === tab
-                  ? 'bg-gray-900 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  ? 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
             >
               {tab}
               <span
                 className={`rounded-full px-1.5 py-0.5 text-xs ${
-                  activeTab === tab ? 'bg-white/20 text-white' : 'bg-white text-gray-500'
+                  activeTab === tab
+                    ? 'bg-white/20 dark:bg-black/20 text-white dark:text-gray-900'
+                    : 'bg-white dark:bg-gray-600 text-gray-500 dark:text-gray-300'
                 }`}
               >
                 {count(tab)}
@@ -58,17 +60,17 @@ export function TradeTable({ trades, onDelete, onUpdate }: TradeTableProps) {
         </div>
 
         {filtered.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-gray-300 p-12 text-center">
-            <p className="text-gray-400">
+          <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-600 p-12 text-center">
+            <p className="text-gray-400 dark:text-gray-500">
               {trades.length === 0
                 ? 'No trades yet. Add your first trade to get started.'
                 : `No ${activeTab.toLowerCase()} trades.`}
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
+          <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
             <table className="min-w-full text-sm">
-              <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+              <thead className="bg-gray-50 dark:bg-gray-700/50 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 <tr>
                   <th className="px-4 py-3 text-left">Asset</th>
                   <th className="px-4 py-3 text-left">Description</th>
@@ -95,7 +97,6 @@ export function TradeTable({ trades, onDelete, onUpdate }: TradeTableProps) {
         )}
       </div>
 
-      {/* Edit modal */}
       {editingTrade && (
         <EditTradeModal
           trade={editingTrade}

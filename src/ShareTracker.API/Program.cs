@@ -13,6 +13,7 @@ using ShareTracker.Domain.Interfaces.Repositories;
 using ShareTracker.Infrastructure.Persistence;
 using ShareTracker.Infrastructure.Persistence.Repositories;
 using ShareTracker.Infrastructure.Services;
+using ShareTracker.API.Conventions;
 using ShareTracker.API.Middleware;
 
 // QuestPDF community licence (free for projects up to $1M revenue)
@@ -97,7 +98,11 @@ builder.Services.AddCors(opts =>
               .AllowAnyMethod()));
 
 // ── API layer ────────────────────────────────────────────────────────────────
-builder.Services.AddControllers();
+builder.Services.AddControllers(opts =>
+{
+    if (builder.Environment.IsStaging())
+        opts.Conventions.Add(new ApiPrefixConvention());
+});
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(opts =>
 {

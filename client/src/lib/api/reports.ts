@@ -2,7 +2,7 @@ import { BASE } from './client';
 
 export const reportsApi = {
   export: async (fy: number, format: 'pdf' | 'csv', token: string): Promise<void> => {
-    const res = await fetch(`${BASE}/reports/export?fy=${fy}&format=${format}`, {
+    const res = await fetch(`${BASE}/api/reports/export?fy=${fy}&format=${format}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) throw new Error(`Export failed: ${res.status}`);

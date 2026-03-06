@@ -19,6 +19,6 @@ public class GetUserProfileQueryHandler : IRequestHandler<GetUserProfileQuery, U
     {
         var profile = await _profiles.GetByClerkUserIdAsync(_currentUser.UserId, cancellationToken);
         if (profile is null) return null;
-        return new UserProfileDto(profile.ClerkUserId, profile.IsForeignResident, profile.HomeCurrency);
+        return new UserProfileDto(profile.ClerkUserId, profile.IsForeignResident, profile.HomeCurrency, profile.ThemePreference);
     }
 }

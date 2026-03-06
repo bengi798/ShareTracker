@@ -10,8 +10,8 @@ import { HowToUseModal } from '@/components/trades/HowToUseModal';
 
 function navLink(active: boolean) {
   return active
-    ? 'rounded-md px-3 py-1.5 text-sm font-medium bg-indigo-50 text-indigo-700'
-    : 'rounded-md px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900';
+    ? 'rounded-md px-3 py-1.5 text-sm font-medium bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300'
+    : 'rounded-md px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white';
 }
 
 export function Navbar() {
@@ -28,7 +28,7 @@ export function Navbar() {
 
   return (
     <>
-      <header className="border-b border-gray-200 bg-white">
+      <header className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-6">
             <Link href="/" className="text-xl font-bold text-indigo-600">
@@ -47,7 +47,6 @@ export function Navbar() {
               <Link href="/reports" className={navLink(pathname.startsWith('/reports'))}>
                 Reports
               </Link>
-              {/* Show Pricing link only for non-investor users */}
               {isInvestor === false && (
                 <Link href="/pricing" className={navLink(pathname.startsWith('/pricing'))}>
                   Pricing
@@ -55,23 +54,22 @@ export function Navbar() {
               )}
               <button
                 onClick={() => setShowHowToUse(true)}
-                className="rounded-md px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900"
+                className="rounded-md px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
               >
                 How to use
               </button>
             </nav>
           </div>
           <div className="flex items-center gap-4">
-            {/* Investor plan badge */}
             {isInvestor && (
-              <span className="hidden rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-700 sm:inline">
+              <span className="hidden rounded-full bg-indigo-100 dark:bg-indigo-900/50 px-2.5 py-0.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300 sm:inline">
                 Investor
               </span>
             )}
-            <span className="hidden text-sm text-gray-500 sm:block">{email}</span>
+            <span className="hidden text-sm text-gray-500 dark:text-gray-400 sm:block">{email}</span>
             <Link
               href="/account"
-              className="hidden text-sm font-medium text-gray-600 hover:text-gray-900 sm:block"
+              className="hidden text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white sm:block"
             >
               Account
             </Link>

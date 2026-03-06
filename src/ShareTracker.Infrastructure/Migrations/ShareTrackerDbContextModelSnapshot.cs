@@ -97,6 +97,11 @@ namespace ShareTracker.Infrastructure.Migrations
                     b.Property<bool>("IsForeignResident")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("ThemePreference")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
                     b.HasKey("ClerkUserId");
 
                     b.ToTable("UserProfiles");

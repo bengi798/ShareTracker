@@ -36,9 +36,10 @@ public class UpsertUserProfileCommandHandler : IRequestHandler<UpsertUserProfile
 
         profile.IsForeignResident = request.IsForeignResident;
         profile.HomeCurrency      = request.HomeCurrency;
+        profile.ThemePreference   = request.ThemePreference;
 
         await _uow.SaveChangesAsync(cancellationToken);
 
-        return new UserProfileDto(profile.ClerkUserId, profile.IsForeignResident, profile.HomeCurrency);
+        return new UserProfileDto(profile.ClerkUserId, profile.IsForeignResident, profile.HomeCurrency, profile.ThemePreference);
     }
 }

@@ -5,11 +5,11 @@ import type { Trade } from '@/lib/types';
 import { Button } from '@/components/ui/Button';
 
 const ASSET_BADGE: Record<Trade['assetType'], string> = {
-  Shares:   'bg-blue-100   text-blue-700',
-  Gold:     'bg-amber-100  text-amber-700',
-  Crypto:   'bg-purple-100 text-purple-700',
-  Bond:     'bg-teal-100   text-teal-700',
-  Property: 'bg-orange-100 text-orange-700',
+  Shares:   'bg-blue-100   text-blue-700   dark:bg-blue-900/40   dark:text-blue-300',
+  Gold:     'bg-amber-100  text-amber-700  dark:bg-amber-900/40  dark:text-amber-300',
+  Crypto:   'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
+  Bond:     'bg-teal-100   text-teal-700   dark:bg-teal-900/40   dark:text-teal-300',
+  Property: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
 };
 
 function tradeDescription(trade: Trade): string {
@@ -47,30 +47,32 @@ export function TradeRow({ trade, onDelete, onEdit }: TradeRowProps) {
     }
   };
 
-  const typeColour = trade.tradeType === 'Buy' ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50';
+  const typeColour = trade.tradeType === 'Buy'
+    ? 'text-green-700 bg-green-50 dark:text-green-300 dark:bg-green-900/30'
+    : 'text-red-700 bg-red-50 dark:text-red-300 dark:bg-red-900/30';
 
   return (
     <>
-      <tr className="border-t border-gray-100 hover:bg-gray-50">
+      <tr className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/40">
         <td className="px-4 py-3">
           <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${ASSET_BADGE[trade.assetType]}`}>
             {trade.assetType}
           </span>
         </td>
-        <td className="px-4 py-3 text-gray-700">{tradeDescription(trade)}</td>
+        <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{tradeDescription(trade)}</td>
         <td className="px-4 py-3">
           <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${typeColour}`}>
             {trade.tradeType}
           </span>
         </td>
-        <td className="px-4 py-3 text-right tabular-nums text-gray-700">{trade.numberOfUnits}</td>
-        <td className="px-4 py-3 text-right tabular-nums text-gray-700">
+        <td className="px-4 py-3 text-right tabular-nums text-gray-700 dark:text-gray-300">{trade.numberOfUnits}</td>
+        <td className="px-4 py-3 text-right tabular-nums text-gray-700 dark:text-gray-300">
           ${trade.pricePerUnit.toFixed(2)}
         </td>
-        <td className="px-4 py-3 text-right tabular-nums font-medium text-gray-900">
+        <td className="px-4 py-3 text-right tabular-nums font-medium text-gray-900 dark:text-white">
           ${trade.totalValue.toFixed(2)}
         </td>
-        <td className="px-4 py-3 text-gray-500">{trade.dateOfTrade}</td>
+        <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{trade.dateOfTrade}</td>
         <td className="px-4 py-3 text-right">
           <div className="flex items-center justify-end gap-2">
             <Button variant="ghost" onClick={() => onEdit(trade)} className="text-xs px-2 py-1">
@@ -91,11 +93,11 @@ export function TradeRow({ trade, onDelete, onEdit }: TradeRowProps) {
               onClick={() => setShowConfirm(false)}
             >
               <div
-                className="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl"
+                className="w-full max-w-sm rounded-lg bg-white dark:bg-gray-800 p-6 shadow-xl"
                 onClick={e => e.stopPropagation()}
               >
-                <h2 className="mb-1 text-lg font-semibold text-gray-900">Delete trade?</h2>
-                <p className="mb-6 text-sm text-gray-500">
+                <h2 className="mb-1 text-lg font-semibold text-gray-900 dark:text-white">Delete trade?</h2>
+                <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
                   This will permanently delete this {trade.assetType} trade from {trade.dateOfTrade}. This action cannot be undone.
                 </p>
                 <div className="flex justify-end gap-3">

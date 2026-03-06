@@ -5,4 +5,5 @@ namespace ShareTracker.Application.Profile.Commands.UpsertUserProfile;
 
 public record UpsertUserProfileCommand(
     bool   IsForeignResident,
-    string HomeCurrency) : IRequest<UserProfileDto>;
+    string HomeCurrency,
+    string ThemePreference = "system") : IRequest<UserProfileDto>;

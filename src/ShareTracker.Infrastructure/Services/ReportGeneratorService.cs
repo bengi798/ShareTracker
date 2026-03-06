@@ -215,10 +215,10 @@ public class ReportGeneratorService : IReportGeneratorService
                                 DataCell(table,
                                     row.FrankingPercent > 0 ? $"{row.FrankingPercent * 100:F0}%" : "—",
                                     bg, right: true);
-                                DataCell(table,
-                                    row.FrankingCredit > 0 ? Fmt(row.FrankingCredit) : "—",
-                                    bg, right: true,
-                                    color: row.FrankingCredit > 0 ? Colors.Green.Darken2 : null);
+                                if (row.FrankingCredit > 0)
+                                    DataCell(table, Fmt(row.FrankingCredit), bg, right: true, color: Colors.Green.Darken2);
+                                else
+                                    DataCell(table, "—", bg, right: true);
                             }
                         });
 
