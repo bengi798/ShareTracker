@@ -1,6 +1,6 @@
 import type { ApiValidationError, ApiMessageError } from '@/lib/types';
 
-export const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000/api';
+export const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000';
 
 export class ApiError extends Error {
   constructor(

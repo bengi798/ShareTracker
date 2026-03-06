@@ -103,6 +103,64 @@ public class EodhdMarketDataService : IMarketDataService
         }
     }
 
+    public async Task<IReadOnlyList<MarketDividend>> GetDividendsAsync(
+        string symbol,
+        DateOnly from,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var url = $"{_settings.BaseUrl}/div/{Uri.EscapeDataString(symbol)}" +
+                      $"?from={from:yyyy-MM-dd}&api_token={_settings.ApiToken}&fmt=json";
+
+            var client   = _httpFactory.CreateClient("eodhd");
+            var response = await client.GetAsync(url, ct);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("EODHD dividends returned {StatusCode} for {Symbol}", response.StatusCode, symbol);
+                return [];
+            }
+
+            var json = await response.Content.ReadAsStringAsync(ct);
+            var records = JsonSerializer.Deserialize<EodhdDividendRecord[]>(json, JsonOpts);
+            if (records is null) return [];
+
+            var results = new List<MarketDividend>(records.Length);
+            foreach (var r in records)
+            {
+                if (!DateOnly.TryParse(r.Date, out var exDate)) continue;
+
+                DateOnly? paymentDate = null;
+                if (DateOnly.TryParse(r.PaymentDate, out var pd)) paymentDate = pd;
+
+                var frankingPercent = ParseFrankingPercent(r.Franking);
+
+                results.Add(new MarketDividend(
+                    ExDate:         exDate,
+                    PaymentDate:    paymentDate,
+                    Period:         r.Period ?? "",
+                    Value:          r.Value ?? 0m,
+                    Currency:       r.Currency ?? "AUD",
+                    FrankingPercent: frankingPercent));
+            }
+
+            return results;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch EODHD dividends for {Symbol}", symbol);
+            return [];
+        }
+    }
+
+    private static decimal ParseFrankingPercent(string? franking)
+    {
+        if (string.IsNullOrWhiteSpace(franking)) return 0m;
+        var m = System.Text.RegularExpressions.Regex.Match(franking, @"(\d+(?:\.\d+)?)");
+        return m.Success ? decimal.Parse(m.Groups[1].Value) / 100m : 0m;
+    }
+
     // ── EODHD JSON response shape ─────────────────────────────────────────────
     private record EodhdBar(
         [property: JsonPropertyName("date")]           string?  Date,
@@ -112,4 +170,12 @@ public class EodhdMarketDataService : IMarketDataService
         [property: JsonPropertyName("close")]          decimal? Close,
         [property: JsonPropertyName("adjusted_close")] decimal? AdjustedClose,
         [property: JsonPropertyName("volume")]         long?    Volume);
+
+    private record EodhdDividendRecord(
+        [property: JsonPropertyName("date")]         string?  Date,
+        [property: JsonPropertyName("paymentDate")]  string?  PaymentDate,
+        [property: JsonPropertyName("period")]       string?  Period,
+        [property: JsonPropertyName("value")]        decimal? Value,
+        [property: JsonPropertyName("currency")]     string?  Currency,
+        [property: JsonPropertyName("franking")]     string?  Franking);
 }

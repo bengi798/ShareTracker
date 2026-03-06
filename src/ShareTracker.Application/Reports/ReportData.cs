@@ -15,6 +15,19 @@ public record ReportRow(
     decimal? SplitDiscountedTaxable,
     decimal? SplitNonDiscountedTaxable);
 
+public record DividendRow(
+    string Ticker,
+    string Exchange,
+    DateOnly ExDate,
+    DateOnly? PaymentDate,
+    string Period,
+    decimal ValuePerUnit,
+    string Currency,
+    decimal UnitsHeld,
+    decimal TotalDividend,
+    decimal FrankingPercent,
+    decimal FrankingCredit);
+
 public record ReportData(
     int FinancialYear,
     decimal TotalProceeds,
@@ -23,4 +36,5 @@ public record ReportData(
     decimal NetTaxableGain,
     bool AnyDiscountApplied,
     int ExcludedNonAudCount,
-    IReadOnlyList<ReportRow> Rows);
+    IReadOnlyList<ReportRow> Rows,
+    IReadOnlyList<DividendRow> DividendRows);

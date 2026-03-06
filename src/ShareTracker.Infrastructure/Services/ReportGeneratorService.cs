@@ -147,6 +147,107 @@ public class ReportGeneratorService : IReportGeneratorService
                             }
                         }
                     });
+
+                    // ── Dividends section ─────────────────────────────────────
+                    if (data.DividendRows.Count > 0)
+                    {
+                        col.Item().PaddingTop(8).Text("Dividends Received")
+                            .FontSize(13).Bold().FontColor(Colors.Grey.Darken3);
+
+                        col.Item()
+                            .Background(Colors.Amber.Lighten4)
+                            .Border(1).BorderColor(Colors.Amber.Medium)
+                            .Padding(6)
+                            .Text("Franking credits are calculated assuming a 30% corporate tax rate. Some companies (base rate entities with aggregated turnover < $50M) may use a 25% rate — consult your tax adviser.")
+                            .FontSize(8).FontColor(Colors.Orange.Darken3);
+
+                        col.Item().Table(table =>
+                        {
+                            table.ColumnsDefinition(cols =>
+                            {
+                                cols.ConstantColumn(65);   // Ex-Date
+                                cols.ConstantColumn(65);   // Payment Date
+                                cols.RelativeColumn(1.5f); // Ticker · Exchange
+                                cols.ConstantColumn(60);   // Period
+                                cols.ConstantColumn(60);   // Units Held
+                                cols.ConstantColumn(65);   // Value/Unit
+                                cols.ConstantColumn(75);   // Total Dividend
+                                cols.ConstantColumn(55);   // Franking %
+                                cols.ConstantColumn(75);   // Franking Credit
+                            });
+
+                            table.Header(h =>
+                            {
+                                static void DivHdr(IContainer cell, string text, bool right = false)
+                                {
+                                    var styled = cell.Background(Colors.Green.Darken2).Padding(5);
+                                    var t = right
+                                        ? styled.AlignRight().Text(text)
+                                        : styled.Text(text);
+                                    t.FontColor(Colors.White).Bold().FontSize(8);
+                                }
+
+                                DivHdr(h.Cell(), "Ex-Date");
+                                DivHdr(h.Cell(), "Payment Date");
+                                DivHdr(h.Cell(), "Security");
+                                DivHdr(h.Cell(), "Period");
+                                DivHdr(h.Cell(), "Units Held",       right: true);
+                                DivHdr(h.Cell(), "Value/Unit",       right: true);
+                                DivHdr(h.Cell(), "Total Dividend",   right: true);
+                                DivHdr(h.Cell(), "Franking %",       right: true);
+                                DivHdr(h.Cell(), "Franking Credit",  right: true);
+                            });
+
+                            uint divIdx = 0;
+                            foreach (var row in data.DividendRows)
+                            {
+                                var bg = divIdx % 2 == 0 ? Colors.White : Colors.Grey.Lighten5;
+                                divIdx++;
+
+                                DataCell(table, row.ExDate.ToString("dd MMM yyyy"), bg);
+                                DataCell(table, row.PaymentDate.HasValue
+                                    ? row.PaymentDate.Value.ToString("dd MMM yyyy") : "—", bg);
+                                DataCell(table, $"{row.Ticker} · {row.Exchange}", bg);
+                                DataCell(table, row.Period, bg);
+                                DataCell(table, FmtUnits(row.UnitsHeld), bg, right: true);
+                                DataCell(table, $"{row.Currency} {row.ValuePerUnit:F4}", bg, right: true);
+                                DataCell(table, Fmt(row.TotalDividend), bg, right: true);
+                                DataCell(table,
+                                    row.FrankingPercent > 0 ? $"{row.FrankingPercent * 100:F0}%" : "—",
+                                    bg, right: true);
+                                DataCell(table,
+                                    row.FrankingCredit > 0 ? Fmt(row.FrankingCredit) : "—",
+                                    bg, right: true,
+                                    color: row.FrankingCredit > 0 ? Colors.Green.Darken2 : null);
+                            }
+                        });
+
+                        // Dividend totals by currency
+                        var byCurrency = data.DividendRows
+                            .Where(r => r.UnitsHeld > 0)
+                            .GroupBy(r => r.Currency)
+                            .Select(g => new
+                            {
+                                Currency        = g.Key,
+                                TotalDividend   = g.Sum(r => r.TotalDividend),
+                                FrankingCredits = g.Sum(r => r.FrankingCredit),
+                            })
+                            .OrderBy(g => g.Currency)
+                            .ToList();
+
+                        col.Item()
+                            .Border(1).BorderColor(Colors.Grey.Lighten2)
+                            .Padding(8)
+                            .Row(row =>
+                            {
+                                foreach (var g in byCurrency)
+                                {
+                                    AddSummaryCell(row, $"Total Dividends ({g.Currency})", $"{g.Currency} {g.TotalDividend:N2}");
+                                    if (g.FrankingCredits > 0)
+                                        AddSummaryCell(row, $"Total Franking Credits ({g.Currency})", $"{g.Currency} {g.FrankingCredits:N2}");
+                                }
+                            });
+                    }
                 });
 
                 page.Footer().AlignCenter().Text(x =>
@@ -217,6 +318,76 @@ public class ReportGeneratorService : IReportGeneratorService
         csv.WriteField(data.AnyDiscountApplied ? "Taxable Gain (50% CGT discount applied)" : "Taxable Gain");
         csv.WriteField(data.NetTaxableGain);
         csv.NextRecord();
+
+        // ── Dividends ────────────────────────────────────────────────────────
+        if (data.DividendRows.Count > 0)
+        {
+            csv.NextRecord();
+            csv.WriteField("DIVIDENDS RECEIVED");
+            csv.NextRecord();
+
+            csv.WriteField("NOTE: Franking credits are calculated assuming a 30% corporate tax rate. Some companies (base rate entities) may use 25% — consult your tax adviser.");
+            csv.NextRecord();
+
+            csv.WriteField("Ex-Date");
+            csv.WriteField("Payment Date");
+            csv.WriteField("Ticker");
+            csv.WriteField("Exchange");
+            csv.WriteField("Period");
+            csv.WriteField("Units Held");
+            csv.WriteField("Value Per Unit");
+            csv.WriteField("Currency");
+            csv.WriteField("Total Dividend");
+            csv.WriteField("Franking %");
+            csv.WriteField("Franking Credit (AUD)");
+            csv.NextRecord();
+
+            foreach (var row in data.DividendRows)
+            {
+                csv.WriteField(row.ExDate.ToString("yyyy-MM-dd"));
+                csv.WriteField(row.PaymentDate.HasValue ? row.PaymentDate.Value.ToString("yyyy-MM-dd") : "");
+                csv.WriteField(row.Ticker);
+                csv.WriteField(row.Exchange);
+                csv.WriteField(row.Period);
+                csv.WriteField(row.UnitsHeld);
+                csv.WriteField(row.ValuePerUnit);
+                csv.WriteField(row.Currency);
+                csv.WriteField(row.TotalDividend);
+                csv.WriteField(row.FrankingPercent > 0 ? (object)(row.FrankingPercent * 100m) : "");
+                csv.WriteField(row.FrankingCredit > 0 ? (object)row.FrankingCredit : "");
+                csv.NextRecord();
+            }
+
+            // Dividend totals by currency
+            csv.NextRecord();
+            csv.WriteField("DIVIDEND SUMMARY");
+            csv.NextRecord();
+
+            var byCurrency = data.DividendRows
+                .Where(r => r.UnitsHeld > 0)
+                .GroupBy(r => r.Currency)
+                .Select(g => new
+                {
+                    Currency        = g.Key,
+                    TotalDividend   = g.Sum(r => r.TotalDividend),
+                    FrankingCredits = g.Sum(r => r.FrankingCredit),
+                })
+                .OrderBy(g => g.Currency);
+
+            foreach (var g in byCurrency)
+            {
+                csv.WriteField($"Total Dividends ({g.Currency})");
+                csv.WriteField(g.TotalDividend);
+                csv.NextRecord();
+
+                if (g.FrankingCredits > 0)
+                {
+                    csv.WriteField($"Total Franking Credits ({g.Currency})");
+                    csv.WriteField(g.FrankingCredits);
+                    csv.NextRecord();
+                }
+            }
+        }
 
         writer.Flush();
         return ms.ToArray();

@@ -659,7 +659,10 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
         <div className="mb-4">
           <h2 className="text-base font-semibold text-gray-900">Dividends</h2>
           <p className="mt-0.5 text-sm text-gray-500">
-            Dividends received on shares held during FY{selectedFY}, including franking credits (30% corporate tax rate).
+            Dividends received on shares held during FY{selectedFY}, including franking credits.
+          </p>
+          <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            <span className="font-semibold">Franking credit note:</span> Credits are calculated assuming a <span className="font-semibold">30% corporate tax rate</span>. Some companies (base rate entities with aggregated turnover under $50M) may use a 25% rate instead — please consult your tax adviser.
           </p>
         </div>
 

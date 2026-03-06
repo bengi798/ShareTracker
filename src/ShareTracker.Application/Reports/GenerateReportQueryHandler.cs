@@ -9,18 +9,30 @@ namespace ShareTracker.Application.Reports;
 public class GenerateReportQueryHandler
     : IRequestHandler<GenerateReportQuery, (byte[] Bytes, string ContentType, string FileName)>
 {
+    private static readonly Dictionary<Exchange, string> ExchangeCodes = new()
+    {
+        [Exchange.ASX]    = "AU",
+        [Exchange.NYSE]   = "US",
+        [Exchange.NASDAQ] = "US",
+        [Exchange.LSE]    = "LSE",
+        [Exchange.TSX]    = "TO",
+    };
+
     private readonly ITradeRepository _trades;
     private readonly ICurrentUserService _currentUser;
     private readonly IReportGeneratorService _generator;
+    private readonly IMarketDataService _marketData;
 
     public GenerateReportQueryHandler(
         ITradeRepository trades,
         ICurrentUserService currentUser,
-        IReportGeneratorService generator)
+        IReportGeneratorService generator,
+        IMarketDataService marketData)
     {
         _trades = trades;
         _currentUser = currentUser;
         _generator = generator;
+        _marketData = marketData;
     }
 
     public async Task<(byte[] Bytes, string ContentType, string FileName)> Handle(
@@ -96,6 +108,9 @@ public class GenerateReportQueryHandler
 
         var netGainLoss = totalProceeds - totalCostBasis;
 
+        // ── Dividends ─────────────────────────────────────────────────────────
+        var dividendRows = await FetchDividendsAsync(audTrades, fyStart, fyEnd, cancellationToken);
+
         var reportData = new ReportData(
             FinancialYear:     request.FinancialYear,
             TotalProceeds:     totalProceeds,
@@ -104,7 +119,8 @@ public class GenerateReportQueryHandler
             NetTaxableGain:    netTaxableGain,
             AnyDiscountApplied: anyDiscount,
             ExcludedNonAudCount: excludedCount,
-            Rows:              rows);
+            Rows:              rows,
+            DividendRows:      dividendRows);
 
         var format = request.Format.ToLowerInvariant();
         if (format == "csv")
@@ -253,4 +269,76 @@ public class GenerateReportQueryHandler
         PropertyTrade pt => $"{pt.Address} · {pt.PropertyType}",
         _               => throw new InvalidOperationException($"Unknown trade type: {trade.GetType().Name}")
     };
+
+    // ── Dividend fetching ─────────────────────────────────────────────────────
+
+    private async Task<IReadOnlyList<DividendRow>> FetchDividendsAsync(
+        IReadOnlyList<Trade> audTrades,
+        DateOnly fyStart,
+        DateOnly fyEnd,
+        CancellationToken ct)
+    {
+        // Group shares trades by ticker|exchange
+        var shareGroups = audTrades
+            .OfType<SharesTrade>()
+            .GroupBy(st => $"{st.Ticker.Value.ToUpperInvariant()}|{st.Exchange}")
+            .ToDictionary(g => g.Key, g => g.OrderBy(t => t.DateOfTrade).ThenBy(t => t.CreatedAt).ToList());
+
+        // Determine which shares were active during the FY
+        var results = new List<DividendRow>();
+
+        foreach (var (key, trades) in shareGroups)
+        {
+            var firstBuy = trades.FirstOrDefault(t => t.TradeType == TradeType.Buy);
+            if (firstBuy is null || firstBuy.DateOfTrade > fyEnd) continue;
+
+            // Must have held units at some point during the FY
+            var unitsAtFyStart = trades
+                .Where(t => t.DateOfTrade < fyStart)
+                .Sum(t => t.TradeType == TradeType.Buy ? t.NumberOfUnits : -t.NumberOfUnits);
+            var boughtDuringFy = trades.Any(t =>
+                t.TradeType == TradeType.Buy && t.DateOfTrade >= fyStart && t.DateOfTrade <= fyEnd);
+            if (unitsAtFyStart <= 0 && !boughtDuringFy) continue;
+
+            var ticker   = firstBuy.Ticker.Value.ToUpperInvariant();
+            var exchange = firstBuy.Exchange;
+            if (!ExchangeCodes.TryGetValue(exchange, out var exchangeCode)) continue;
+
+            var symbol    = $"{ticker}.{exchangeCode}";
+            var dividends = await _marketData.GetDividendsAsync(symbol, fyStart, ct);
+
+            foreach (var div in dividends)
+            {
+                if (div.ExDate < fyStart || div.ExDate > fyEnd) continue;
+
+                // Units held at the ex-dividend date
+                var unitsHeld = trades
+                    .Where(t => t.DateOfTrade <= div.ExDate)
+                    .Sum(t => t.TradeType == TradeType.Buy ? t.NumberOfUnits : -t.NumberOfUnits);
+
+                if (unitsHeld <= 0) continue;
+
+                var totalDividend  = div.Value * unitsHeld;
+                // ((dividend / (1 − 0.3)) − dividend) × frankingPercent
+                var frankingCredit = div.FrankingPercent > 0
+                    ? ((totalDividend / 0.7m) - totalDividend) * div.FrankingPercent
+                    : 0m;
+
+                results.Add(new DividendRow(
+                    Ticker:          ticker,
+                    Exchange:        exchange.ToString(),
+                    ExDate:          div.ExDate,
+                    PaymentDate:     div.PaymentDate,
+                    Period:          div.Period,
+                    ValuePerUnit:    div.Value,
+                    Currency:        div.Currency,
+                    UnitsHeld:       unitsHeld,
+                    TotalDividend:   totalDividend,
+                    FrankingPercent: div.FrankingPercent,
+                    FrankingCredit:  frankingCredit));
+            }
+        }
+
+        return results.OrderBy(r => r.ExDate).ThenBy(r => r.Ticker).ToList();
+    }
 }
