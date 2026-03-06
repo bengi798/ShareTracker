@@ -18,14 +18,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (isLoading || !token) {
     return (
-      <div className="flex h-screen items-center justify-center bg-white dark:bg-gray-950">
+      <div className="flex h-screen items-center justify-center bg-[#f5f5f3] dark:bg-[#111111]">
         <Spinner />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-[#f5f5f3] dark:bg-[#111111]">
       <Navbar />
       <main className="mx-auto max-w-7xl px-4 py-8">{children}</main>
     </div>

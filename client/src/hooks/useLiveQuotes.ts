@@ -40,10 +40,7 @@ export function useLiveQuotes(
   [sharesPositions]);
 
   const cryptoSymbols = useMemo(() =>
-    cryptoPositions.map(p => {
-      const ccy = !p.currency || p.currency === '0' ? 'USD' : p.currency;
-      return `${p.coinSymbol.toUpperCase()}-${ccy}.CC`;
-    }),
+    cryptoPositions.map(p => `${p.coinSymbol.toUpperCase()}-USD.CC`),
   [cryptoPositions]);
 
   const symbolsKey = [...shareSymbols, ...cryptoSymbols].join(',');
@@ -71,8 +68,7 @@ export function useLiveQuotes(
         });
 
         const newCrypto: CryptoQuote[] = cryptoPositions.flatMap(p => {
-          const ccy    = !p.currency || p.currency === '0' ? 'USD' : p.currency;
-          const symbol = `${p.coinSymbol.toUpperCase()}-${ccy}.CC`;
+          const symbol = `${p.coinSymbol.toUpperCase()}-USD.CC`;
           const match  = data.find(d => d.code === symbol);
           if (!match) return [];
           return [{ assetType: 'Crypto', coinSymbol: p.coinSymbol.toUpperCase(), lastClose: match.close, asOf: today }];
@@ -88,8 +84,7 @@ export function useLiveQuotes(
         }, 0);
 
         const cryptoDayChange = cryptoPositions.reduce((sum, p) => {
-          const ccy   = !p.currency || p.currency === '0' ? 'USD' : p.currency;
-          const match = data.find(d => d.code === `${p.coinSymbol.toUpperCase()}-${ccy}.CC`);
+          const match = data.find(d => d.code === `${p.coinSymbol.toUpperCase()}-USD.CC`);
           if (!match || !match.previousClose) return sum;
           return sum + (match.close - match.previousClose) * p.availableUnits;
         }, 0);
@@ -103,8 +98,7 @@ export function useLiveQuotes(
           if (match) changesMap.set(`${p.ticker.toUpperCase()}|${p.exchange}`, { change: match.change, changePercent: match.change_p });
         });
         cryptoPositions.forEach(p => {
-          const ccy   = !p.currency || p.currency === '0' ? 'USD' : p.currency;
-          const match = data.find(d => d.code === `${p.coinSymbol.toUpperCase()}-${ccy}.CC`);
+          const match = data.find(d => d.code === `${p.coinSymbol.toUpperCase()}-USD.CC`);
           if (match) changesMap.set(p.coinSymbol.toUpperCase(), { change: match.change, changePercent: match.change_p });
         });
 

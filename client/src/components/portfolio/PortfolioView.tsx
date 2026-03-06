@@ -41,11 +41,11 @@ function toAud(amount: number, currency: string, rates: Record<string, number>):
 
 // ── Accent colours per category ───────────────────────────────────────
 const CAT_STYLES = {
-  Shares:   { header: 'border-blue-200   bg-blue-50   text-blue-800   dark:border-blue-700   dark:bg-blue-900/30  dark:text-blue-200'   },
-  Gold:     { header: 'border-amber-200  bg-amber-50  text-amber-800  dark:border-amber-700  dark:bg-amber-900/30 dark:text-amber-200'  },
-  Crypto:   { header: 'border-purple-200 bg-purple-50 text-purple-800 dark:border-purple-700 dark:bg-purple-900/30 dark:text-purple-200' },
-  Bond:     { header: 'border-teal-200   bg-teal-50   text-teal-800   dark:border-teal-700   dark:bg-teal-900/30  dark:text-teal-200'   },
-  Property: { header: 'border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-700 dark:bg-orange-900/30 dark:text-orange-200' },
+  Shares:   { header: 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900' },
+  Gold:     { header: 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900' },
+  Crypto:   { header: 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900' },
+  Bond:     { header: 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900' },
+  Property: { header: 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900' },
 };
 
 // ── Position description helpers ──────────────────────────────────────
@@ -82,13 +82,13 @@ function CategorySection({
 }) {
   if (rows.length === 0) return null;
   return (
-    <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+    <div className="overflow-hidden border border-gray-900 dark:border-gray-500">
       <div className={`flex items-center justify-between border-b px-4 py-3 ${style.header}`}>
         <span className="font-semibold">{label}</span>
         <span className="text-sm font-medium">{fmtCurrency(subtotal, subtotalCurrency)}</span>
       </div>
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800 text-sm">
+        <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-zinc-900 text-sm">
           <thead>
             <tr className="text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
               <th className="w-[25%] px-4 py-2">Description</th>
@@ -146,7 +146,7 @@ function SharesCategorySection({
   const subtotalCurrency = displayMode === 'home' ? homeCurrency : displayMode;
 
   return (
-    <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+    <div className="overflow-hidden border border-gray-900 dark:border-gray-500">
       <div className={`flex items-center justify-between border-b px-4 py-3 ${CAT_STYLES.Shares.header}`}>
         <div className="flex items-center gap-2">
           <span className="font-semibold">Shares</span>
@@ -157,7 +157,7 @@ function SharesCategorySection({
         <span className="text-sm font-medium">{fmtCurrency(subtotal, subtotalCurrency)}</span>
       </div>
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800 text-sm">
+        <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-zinc-900 text-sm">
           <thead>
             <tr className="text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
               <th className="w-[18%] px-3 py-2">Description</th>
@@ -255,7 +255,7 @@ function CryptoCategorySection({
   const subtotalCurrency = displayMode === 'home' ? homeCurrency : displayMode;
 
   return (
-    <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+    <div className="overflow-hidden border border-gray-900 dark:border-gray-500">
       <div className={`flex items-center justify-between border-b px-4 py-3 ${CAT_STYLES.Crypto.header}`}>
         <div className="flex items-center gap-2">
           <span className="font-semibold">Crypto</span>
@@ -266,7 +266,7 @@ function CryptoCategorySection({
         <span className="text-sm font-medium">{fmtCurrency(subtotal, subtotalCurrency)}</span>
       </div>
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800 text-sm">
+        <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-zinc-900 text-sm">
           <thead>
             <tr className="text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
               <th className="w-[18%] px-3 py-2">Description</th>
@@ -285,7 +285,11 @@ function CryptoCategorySection({
               const quote = quotes.find(q => q.coinSymbol === p.coinSymbol.toUpperCase());
               const lastClose    = quote?.lastClose ?? null;
               const currentValue = lastClose !== null ? lastClose * p.availableUnits : null;
-              const pnl          = currentValue !== null ? currentValue - p.totalCost : null;
+              // lastClose is always in USD; convert p.totalCost to USD via AUD as pivot for P&L
+              const rateUSD      = rates['USD'] ?? 1;
+              const rateCcy      = rates[normCurrency(p.currency)] ?? 1;
+              const totalCostUSD = rateUSD > 0 ? p.totalCost * rateCcy / rateUSD : p.totalCost;
+              const pnl          = currentValue !== null ? currentValue - totalCostUSD : null;
               const displayCurrency = displayMode === 'home' ? homeCurrency : normCurrency(p.currency);
               const lc = liveChanges?.get(p.coinSymbol.toUpperCase());
 
@@ -297,15 +301,15 @@ function CryptoCategorySection({
                   <td className="w-[14%] px-3 py-3 text-right text-gray-700 dark:text-gray-300 whitespace-nowrap">{fmtVal(p.avgCostPerUnit, p.currency)}</td>
                   <td className="w-[14%] px-3 py-3 text-right font-medium text-gray-900 dark:text-white whitespace-nowrap">{fmtVal(p.totalCost, p.currency)}</td>
                   <td className="w-[14%] px-3 py-3 text-right text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                    {lastClose !== null ? fmtVal(lastClose, p.currency) : '—'}
+                    {lastClose !== null ? fmtVal(lastClose, 'USD') : '—'}
                   </td>
                   <td className="w-[14%] px-3 py-3 text-right text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                    {currentValue !== null ? fmtVal(currentValue, p.currency) : '—'}
+                    {currentValue !== null ? fmtVal(currentValue, 'USD') : '—'}
                   </td>
                   <td className={`w-[14%] px-3 py-3 text-right font-medium whitespace-nowrap ${
                     pnl === null ? 'text-gray-400' : pnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                   }`}>
-                    {pnl === null ? '—' : `${pnl >= 0 ? '+' : ''}${fmtVal(pnl, p.currency)}`}
+                    {pnl === null ? '—' : `${pnl >= 0 ? '+' : ''}${fmtVal(pnl, 'USD')}`}
                   </td>
                   {liveChanges && (
                     <td className={`px-3 py-3 text-right text-sm whitespace-nowrap ${
@@ -313,7 +317,7 @@ function CryptoCategorySection({
                     }`}>
                       {lc ? (
                         <span className="flex flex-col items-end">
-                          <span>{lc.change >= 0 ? '+' : ''}{fmtVal(lc.change, p.currency)}</span>
+                          <span>{lc.change >= 0 ? '+' : ''}{fmtVal(lc.change * p.availableUnits, 'USD')}</span>
                           <span className="text-xs">{lc.changePercent >= 0 ? '+' : ''}{lc.changePercent.toFixed(2)}%</span>
                         </span>
                       ) : '—'}
@@ -414,8 +418,10 @@ export function PortfolioView({
 
     const cryptoValue = visibleCrypto.reduce((sum, p) => {
       const q   = cryptoQuotes.find(q => q.coinSymbol === p.coinSymbol.toUpperCase());
+      // crypto lastClose is always in USD
       const raw = q?.lastClose != null ? q.lastClose * p.availableUnits : p.totalCost;
-      return sum + (displayMode === 'home' ? toAud(raw, p.currency, rates) : raw);
+      const rawCurrency = q?.lastClose != null ? 'USD' : p.currency;
+      return sum + (displayMode === 'home' ? toAud(raw, rawCurrency, rates) : raw);
     }, 0);
 
     const otherValue = [...visibleGold, ...visibleBonds, ...visibleProperty].reduce((sum, p) => {
@@ -459,7 +465,7 @@ export function PortfolioView({
 
   if (!hasPositions) {
     return (
-      <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 py-16 text-center">
+      <div className="border border-dashed border-gray-400 dark:border-gray-600 py-16 text-center">
         <p className="text-base font-medium text-gray-500 dark:text-gray-400">No open positions</p>
         <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">
           Add a buy trade to see your portfolio here.
@@ -468,9 +474,9 @@ export function PortfolioView({
     );
   }
 
-  const toggleBtnBase = 'rounded-full px-3 py-1 text-sm font-medium transition-colors';
+  const toggleBtnBase = 'px-3 py-1 text-sm font-medium transition-colors';
   const toggleActive  = `${toggleBtnBase} bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900`;
-  const toggleInactive = `${toggleBtnBase} bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600`;
+  const toggleInactive = `${toggleBtnBase} border border-gray-400 dark:border-gray-500 text-gray-600 dark:text-gray-300 hover:border-gray-900 dark:hover:border-gray-100 hover:text-black dark:hover:text-white`;
 
   return (
     <div className="space-y-4">
@@ -516,7 +522,7 @@ export function PortfolioView({
       </div>
 
       {/* ── Summary card ───────────────────────────────────────────── */}
-      <div className="flex gap-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm">
+      <div className="flex gap-10 border border-gray-900 dark:border-gray-500 bg-white dark:bg-zinc-900 p-5">
         <div>
           <p className="text-sm text-gray-500 dark:text-gray-400">Total Asset Cost</p>
           <p className="mt-1 flex items-baseline gap-2">

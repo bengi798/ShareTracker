@@ -34,23 +34,23 @@ export function TradeTable({ trades, onDelete, onUpdate }: TradeTableProps) {
     <>
       <div className="space-y-4">
         {/* Filter tabs */}
-        <div className="flex flex-wrap gap-2 border-b border-gray-200 dark:border-gray-700 pb-3">
+        <div className="flex flex-wrap gap-2 border-b border-gray-900 dark:border-gray-500 pb-3">
           {TABS.map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1 text-sm font-medium transition-colors ${
                 activeTab === tab
                   ? 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  : 'border border-gray-400 dark:border-gray-500 text-gray-600 dark:text-gray-300 hover:border-gray-900 dark:hover:border-gray-100 hover:text-black dark:hover:text-white'
               }`}
             >
               {tab}
               <span
-                className={`rounded-full px-1.5 py-0.5 text-xs ${
+                className={`px-1.5 py-0.5 text-xs ${
                   activeTab === tab
                     ? 'bg-white/20 dark:bg-black/20 text-white dark:text-gray-900'
-                    : 'bg-white dark:bg-gray-600 text-gray-500 dark:text-gray-300'
+                    : 'text-gray-500 dark:text-gray-400'
                 }`}
               >
                 {count(tab)}
@@ -60,7 +60,7 @@ export function TradeTable({ trades, onDelete, onUpdate }: TradeTableProps) {
         </div>
 
         {filtered.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-600 p-12 text-center">
+          <div className="border border-dashed border-gray-400 dark:border-gray-600 p-12 text-center">
             <p className="text-gray-400 dark:text-gray-500">
               {trades.length === 0
                 ? 'No trades yet. Add your first trade to get started.'
@@ -68,9 +68,9 @@ export function TradeTable({ trades, onDelete, onUpdate }: TradeTableProps) {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+          <div className="overflow-x-auto border border-gray-900 dark:border-gray-500 bg-white dark:bg-zinc-900">
             <table className="min-w-full text-sm">
-              <thead className="bg-gray-50 dark:bg-gray-700/50 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              <thead className="bg-gray-100 dark:bg-zinc-800 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 <tr>
                   <th className="px-4 py-3 text-left">Asset</th>
                   <th className="px-4 py-3 text-left">Description</th>

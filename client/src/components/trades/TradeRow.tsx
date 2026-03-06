@@ -5,11 +5,11 @@ import type { Trade } from '@/lib/types';
 import { Button } from '@/components/ui/Button';
 
 const ASSET_BADGE: Record<Trade['assetType'], string> = {
-  Shares:   'bg-blue-100   text-blue-700   dark:bg-blue-900/40   dark:text-blue-300',
-  Gold:     'bg-amber-100  text-amber-700  dark:bg-amber-900/40  dark:text-amber-300',
-  Crypto:   'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
-  Bond:     'bg-teal-100   text-teal-700   dark:bg-teal-900/40   dark:text-teal-300',
-  Property: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+  Shares:   'border border-gray-900 dark:border-gray-400 text-gray-900 dark:text-gray-300',
+  Gold:     'border border-gray-900 dark:border-gray-400 text-gray-900 dark:text-gray-300',
+  Crypto:   'border border-gray-900 dark:border-gray-400 text-gray-900 dark:text-gray-300',
+  Bond:     'border border-gray-900 dark:border-gray-400 text-gray-900 dark:text-gray-300',
+  Property: 'border border-gray-900 dark:border-gray-400 text-gray-900 dark:text-gray-300',
 };
 
 function tradeDescription(trade: Trade): string {
@@ -48,20 +48,20 @@ export function TradeRow({ trade, onDelete, onEdit }: TradeRowProps) {
   };
 
   const typeColour = trade.tradeType === 'Buy'
-    ? 'text-green-700 bg-green-50 dark:text-green-300 dark:bg-green-900/30'
-    : 'text-red-700 bg-red-50 dark:text-red-300 dark:bg-red-900/30';
+    ? 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900'
+    : 'border border-gray-900 dark:border-gray-400 text-gray-900 dark:text-gray-300';
 
   return (
     <>
-      <tr className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/40">
+      <tr className="border-t border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-zinc-800/60">
         <td className="px-4 py-3">
-          <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${ASSET_BADGE[trade.assetType]}`}>
+          <span className={`inline-block px-2 py-0.5 text-xs font-semibold ${ASSET_BADGE[trade.assetType]}`}>
             {trade.assetType}
           </span>
         </td>
         <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{tradeDescription(trade)}</td>
         <td className="px-4 py-3">
-          <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${typeColour}`}>
+          <span className={`inline-block px-2 py-0.5 text-xs font-medium ${typeColour}`}>
             {trade.tradeType}
           </span>
         </td>
@@ -93,7 +93,7 @@ export function TradeRow({ trade, onDelete, onEdit }: TradeRowProps) {
               onClick={() => setShowConfirm(false)}
             >
               <div
-                className="w-full max-w-sm rounded-lg bg-white dark:bg-gray-800 p-6 shadow-xl"
+                className="w-full max-w-sm bg-white dark:bg-zinc-900 border border-gray-900 dark:border-gray-500 p-6"
                 onClick={e => e.stopPropagation()}
               >
                 <h2 className="mb-1 text-lg font-semibold text-gray-900 dark:text-white">Delete trade?</h2>

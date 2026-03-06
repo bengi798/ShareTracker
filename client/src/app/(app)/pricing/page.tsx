@@ -22,7 +22,7 @@ const INVESTOR_FEATURES = [
 function Check() {
   return (
     <svg
-      className="h-4 w-4 flex-shrink-0 text-indigo-500"
+      className="h-4 w-4 flex-shrink-0 text-[#0038a8]"
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 20 20"
       fill="currentColor"
@@ -41,8 +41,8 @@ export default function PricingPage() {
     <div className="mx-auto max-w-4xl">
       {/* Header */}
       <div className="mb-10 text-center">
-        <h1 className="text-3xl font-bold text-gray-900">Plans &amp; Pricing</h1>
-        <p className="mt-2 text-base text-gray-500">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Plans &amp; Pricing</h1>
+        <p className="mt-2 text-base text-gray-500 dark:text-gray-400">
           Start for free. Upgrade when you need capital gains reporting.
         </p>
       </div>
@@ -50,15 +50,15 @@ export default function PricingPage() {
       {/* Feature comparison */}
       <div className="mb-10 grid gap-6 sm:grid-cols-2">
         {/* Free plan */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="border border-gray-900 dark:border-gray-500 bg-white dark:bg-zinc-900 p-6">
           <div className="mb-4">
-            <span className="text-sm font-medium uppercase tracking-wide text-gray-500">Free</span>
-            <p className="mt-1 text-2xl font-bold text-gray-900">$0</p>
-            <p className="text-sm text-gray-500">No credit card required</p>
+            <span className="text-sm font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Free</span>
+            <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">$0</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">No credit card required</p>
           </div>
           <ul className="space-y-2.5">
             {FREE_FEATURES.map(f => (
-              <li key={f} className="flex items-start gap-2.5 text-sm text-gray-700">
+              <li key={f} className="flex items-start gap-2.5 text-sm text-gray-700 dark:text-gray-300">
                 <Check />
                 {f}
               </li>
@@ -67,20 +67,20 @@ export default function PricingPage() {
         </div>
 
         {/* Investor plan */}
-        <div className="rounded-xl border-2 border-indigo-500 bg-white p-6 shadow-sm relative">
+        <div className="border-2 border-[#0038a8] bg-white dark:bg-zinc-900 p-6 relative">
           <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-            <span className="rounded-full bg-indigo-600 px-3 py-1 text-xs font-semibold text-white">
+            <span className="bg-[#0038a8] px-3 py-1 text-xs font-semibold text-white">
               Most Popular
             </span>
           </div>
           <div className="mb-4">
-            <span className="text-sm font-medium uppercase tracking-wide text-indigo-600">Investor</span>
-            <p className="mt-1 text-2xl font-bold text-gray-900">See below</p>
-            <p className="text-sm text-gray-500">Billed via Clerk</p>
+            <span className="text-sm font-medium uppercase tracking-wide text-[#0038a8]">Investor</span>
+            <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">See below</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Billed via Clerk</p>
           </div>
           <ul className="space-y-2.5">
             {INVESTOR_FEATURES.map(f => (
-              <li key={f} className="flex items-start gap-2.5 text-sm text-gray-700">
+              <li key={f} className="flex items-start gap-2.5 text-sm text-gray-700 dark:text-gray-300">
                 <Check />
                 {f}
               </li>
@@ -90,7 +90,7 @@ export default function PricingPage() {
       </div>
 
       {/* Clerk PricingTable — handles plan selection and checkout */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div className="border border-gray-900 dark:border-gray-500 bg-white dark:bg-zinc-900 p-6">
         <PricingTable />
       </div>
     </div>

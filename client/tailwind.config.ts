@@ -9,9 +9,17 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['var(--font-work-sans)', 'Work Sans', 'system-ui', 'sans-serif'],
+      },
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        brand: {
+          DEFAULT: '#0038a8',
+          hover: '#002a80',
+          light: '#e8eef9',
+        },
       },
     },
   },

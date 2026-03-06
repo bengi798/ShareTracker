@@ -3,16 +3,71 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f5f5f3;
+  --foreground: #000000;
 }
 
-body {
-  font-family: Arial, Helvetica, sans-serif;
+.dark {
+  --background: #111111;
+  --foreground: #f5f5f3;
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
+}
+
+/* ── Clerk dark mode overrides ─────────────────────────────────────── */
+.dark .cl-card {
+  background-color: #18181b;
+  border-color: #6b7280;
+}
+.dark .cl-formFieldInput,
+.dark .cl-selectButton,
+.dark .cl-selectSearchInput {
+  background-color: #18181b;
+  border-color: #6b7280;
+  color: #f3f4f6;
+}
+.dark .cl-formFieldLabel,
+.dark .cl-headerTitle,
+.dark .cl-headerSubtitle,
+.dark .cl-identityPreviewText,
+.dark .cl-formResendCodeLink {
+  color: #f3f4f6;
+}
+.dark .cl-socialButtonsBlockButton {
+  background-color: #27272a;
+  border-color: #6b7280;
+  color: #f3f4f6;
+}
+.dark .cl-socialButtonsBlockButtonText {
+  color: #f3f4f6;
+}
+.dark .cl-dividerLine {
+  background-color: #6b7280;
+}
+.dark .cl-dividerText {
+  color: #9ca3af;
+}
+.dark .cl-footerActionText {
+  color: #9ca3af;
+}
+.dark .cl-footerActionLink {
+  color: #93c5fd;
+}
+.dark .cl-identityPreviewEditButton {
+  color: #93c5fd;
+}
+.dark .cl-otpCodeFieldInput {
+  background-color: #18181b;
+  border-color: #6b7280;
+  color: #f3f4f6;
+}
+.dark .cl-formFieldInputShowPasswordButton {
+  color: #9ca3af;
+}
+.dark .cl-internal-b3fm6y {
+  color: #9ca3af;
 }

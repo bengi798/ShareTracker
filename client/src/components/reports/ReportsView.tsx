@@ -418,7 +418,7 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
 
   if (availableFYs.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 py-16 text-center">
+      <div className="border border-dashed border-gray-400 dark:border-gray-600 py-16 text-center">
         <p className="text-base font-medium text-gray-500 dark:text-gray-400">No trades recorded yet.</p>
         <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">Add a trade to generate a financial year report.</p>
       </div>
@@ -436,7 +436,7 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
           id="fy-select"
           value={selectedFY ?? ''}
           onChange={e => setSelectedFY(Number(e.target.value))}
-          className="rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          className="border border-gray-900 dark:border-gray-500 bg-white dark:bg-zinc-900 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:border-[#0038a8] focus:outline-none focus:ring-1 focus:ring-[#0038a8]"
         >
           {availableFYs.map(fy => (
             <option key={fy} value={fy}>FY{fy}</option>
@@ -447,7 +447,7 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
           <button
             onClick={() => handleExport('csv')}
             disabled={exportingCsv || selectedFY === null}
-            className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 border border-gray-900 dark:border-gray-500 bg-white dark:bg-zinc-900 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {exportingCsv ? (
               <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
@@ -465,7 +465,7 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
           <button
             onClick={() => handleExport('pdf')}
             disabled={exportingPdf || selectedFY === null}
-            className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 bg-[#0038a8] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#002a80] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {exportingPdf ? (
               <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
@@ -483,7 +483,7 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
       </div>
 
       {/* Summary card */}
-      <div className="flex flex-wrap gap-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm">
+      <div className="flex flex-wrap gap-10 border border-gray-900 dark:border-gray-500 bg-white dark:bg-zinc-900 p-5">
         <div>
           <p className="text-sm text-gray-500 dark:text-gray-400">Total Proceeds</p>
           <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
@@ -513,7 +513,7 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Taxable Gain
             {anyDiscountApplied && (
-              <span className="ml-1 rounded bg-green-100 dark:bg-green-900/40 px-1.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-300">
+              <span className="ml-1 bg-green-100 dark:bg-green-900/40 px-1.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-300">
                 50% CGT discount applied
               </span>
             )}
@@ -532,7 +532,7 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
       </div>
 
       {/* AUD-only disclaimer */}
-      <div className="rounded-md border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+      <div className="border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
         <span className="font-semibold">AUD trades only.</span>{' '}
         This report includes only trades denominated in AUD. Capital gains on foreign-currency assets
         require separate foreign income calculations and are not shown here.
@@ -545,13 +545,13 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
 
       {/* Trades table */}
       {fyTrades.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 py-12 text-center">
+        <div className="border border-dashed border-gray-400 dark:border-gray-600 py-12 text-center">
           <p className="text-sm text-gray-500 dark:text-gray-400">No trades recorded in FY{selectedFY}.</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="overflow-hidden border border-gray-900 dark:border-gray-500">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800 text-sm">
+            <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-zinc-900 text-sm">
               <thead>
                 <tr className="text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
                   <th className="px-4 py-3">Date</th>
@@ -575,11 +575,11 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
                       </td>
                       <td className="px-4 py-3">
                         {trade.tradeType === 'Buy' ? (
-                          <span className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-900/40 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300">
+                          <span className="inline-flex items-center bg-gray-900 dark:bg-gray-100 px-2 py-0.5 text-xs font-medium text-white dark:text-gray-900">
                             BUY
                           </span>
                         ) : (
-                          <span className="inline-flex items-center rounded-full bg-amber-50 dark:bg-amber-900/40 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                          <span className="inline-flex items-center border border-gray-900 dark:border-gray-400 px-2 py-0.5 text-xs font-medium text-gray-900 dark:text-gray-300">
                             SELL
                           </span>
                         )}
@@ -618,7 +618,7 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
                             <span>{`${metrics.discountedGain >= 0 ? '+' : ''}${fmtCurrency(metrics.discountedGain)}`}</span>
                             {metrics.isSplit ? (
                               <>
-                                <span className="rounded bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                                <span className="bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
                                   Partial 50% CGT discount
                                 </span>
                                 <span className="text-xs text-gray-400 dark:text-gray-500">
@@ -626,7 +626,7 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
                                 </span>
                               </>
                             ) : metrics.cgtDiscountApplies ? (
-                              <span className="rounded bg-green-100 dark:bg-green-900/40 px-1.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-300">
+                              <span className="bg-green-100 dark:bg-green-900/40 px-1.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-300">
                                 50% CGT discount
                               </span>
                             ) : null}
@@ -649,14 +649,14 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
           <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
             Dividends received on shares held during FY{selectedFY}, including franking credits.
           </p>
-          <p className="mt-2 rounded-md border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
+          <p className="mt-2 border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
             <span className="font-semibold">Franking credit note:</span> Credits are calculated assuming a <span className="font-semibold">30% corporate tax rate</span>. Some companies (base rate entities with aggregated turnover under $50M) may use a 25% rate instead — please consult your tax adviser.
           </p>
         </div>
 
         {dividendsLoading && (
           <div className="flex items-center gap-2 py-6 text-sm text-gray-500 dark:text-gray-400">
-            <svg className="h-4 w-4 animate-spin text-indigo-500" viewBox="0 0 24 24" fill="none">
+            <svg className="h-4 w-4 animate-spin text-[#0038a8]" viewBox="0 0 24 24" fill="none">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
             </svg>
@@ -665,11 +665,11 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
         )}
 
         {dividendsError && (
-          <div className="rounded-md bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">{dividendsError}</div>
+          <div className="border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">{dividendsError}</div>
         )}
 
         {!dividendsLoading && !dividendsError && fyDividends.length === 0 && (
-          <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 py-10 text-center">
+          <div className="border border-dashed border-gray-400 dark:border-gray-600 py-10 text-center">
             <p className="text-sm text-gray-500 dark:text-gray-400">No dividends found for shares held in FY{selectedFY}.</p>
           </div>
         )}
@@ -677,7 +677,7 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
         {!dividendsLoading && !dividendsError && fyDividends.length > 0 && (
           <div className="space-y-4">
             {dividendTotals.size > 0 && (
-              <div className="flex flex-wrap gap-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm">
+              <div className="flex flex-wrap gap-10 border border-gray-900 dark:border-gray-500 bg-white dark:bg-zinc-900 p-5">
                 {Array.from(dividendTotals.entries()).map(([currency, totals]) => (
                   <Fragment key={currency}>
                     <div>
@@ -689,7 +689,7 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
                     <div>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         Total Franking Credits ({currency})
-                        <span className="ml-1.5 rounded bg-green-100 dark:bg-green-900/40 px-1.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-300">
+                        <span className="ml-1.5 bg-green-100 dark:bg-green-900/40 px-1.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-300">
                           30% tax rate
                         </span>
                       </p>
@@ -702,9 +702,9 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
               </div>
             )}
 
-            <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+            <div className="overflow-hidden border border-gray-900 dark:border-gray-500">
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800 text-sm">
+                <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-zinc-900 text-sm">
                   <thead>
                     <tr className="text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
                       <th className="px-4 py-3">Share</th>
@@ -732,7 +732,7 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
                           {d.paymentDate ? fmtDate(d.paymentDate) : '—'}
                         </td>
                         <td className="px-4 py-3">
-                          <span className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-900/40 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300">
+                          <span className="inline-flex items-center border border-gray-900 dark:border-gray-400 px-2 py-0.5 text-xs font-medium text-gray-900 dark:text-gray-300">
                             {d.period}
                           </span>
                         </td>
@@ -747,7 +747,7 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
                         </td>
                         <td className="px-4 py-3 text-right">
                           {d.franking && d.franking !== '0%' ? (
-                            <span className="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/40 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-300">
+                            <span className="inline-flex items-center bg-green-100 dark:bg-green-900/40 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-300">
                               {d.franking}
                             </span>
                           ) : (

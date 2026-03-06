@@ -84,7 +84,7 @@ export default function AccountPage() {
       </div>
 
       {/* ── Account info ──────────────────────────────────────────── */}
-      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-sm">
+      <div className="border border-gray-900 dark:border-gray-500 bg-white dark:bg-zinc-900 p-6">
         <h2 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">Account</h2>
         <dl className="space-y-3">
           <div className="flex items-center justify-between text-sm">
@@ -96,11 +96,11 @@ export default function AccountPage() {
             <dd className="font-mono text-xs text-gray-400 dark:text-gray-500">{userId}</dd>
           </div>
         </dl>
-        <div className="mt-5 border-t border-gray-100 dark:border-gray-700 pt-4">
+        <div className="mt-5 border-t border-gray-200 dark:border-gray-700 pt-4">
           <button
             type="button"
             onClick={() => openUserProfile()}
-            className="text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
+            className="text-sm font-medium text-[#0038a8] hover:text-[#002a80] dark:text-blue-400 dark:hover:text-blue-300 underline"
           >
             Manage identity (name, email, security) →
           </button>
@@ -108,7 +108,7 @@ export default function AccountPage() {
       </div>
 
       {/* ── Profile preferences ───────────────────────────────────── */}
-      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-sm">
+      <div className="border border-gray-900 dark:border-gray-500 bg-white dark:bg-zinc-900 p-6">
         <h2 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">Profile Preferences</h2>
         <form onSubmit={handleSaveProfile} className="space-y-5">
           <div>
@@ -131,7 +131,7 @@ export default function AccountPage() {
               type="checkbox"
               checked={foreignInput}
               onChange={e => { setForeignInput(e.target.checked); setSaveSuccess(false); }}
-              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              className="mt-0.5 h-4 w-4 border-gray-900 text-[#0038a8] focus:ring-[#0038a8]"
             />
             <div>
               <label htmlFor="isForeignResident" className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -152,10 +152,10 @@ export default function AccountPage() {
                   key={opt.value}
                   type="button"
                   onClick={() => { setThemeInput(opt.value); setSaveSuccess(false); }}
-                  className={`flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-2 border px-4 py-2.5 text-sm font-medium transition-colors ${
                     themeInput === opt.value
-                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
-                      : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+                      ? 'border-gray-900 dark:border-gray-100 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900'
+                      : 'border-gray-400 dark:border-gray-500 bg-white dark:bg-zinc-900 text-gray-700 dark:text-gray-300 hover:border-gray-900 dark:hover:border-gray-100'
                   }`}
                 >
                   {opt.label}
@@ -187,7 +187,7 @@ export default function AccountPage() {
       </div>
 
       {/* ── Subscription ──────────────────────────────────────────── */}
-      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-sm">
+      <div className="border border-gray-900 dark:border-gray-500 bg-white dark:bg-zinc-900 p-6">
         <h2 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">Subscription</h2>
 
         {isInvestor === null ? (
@@ -195,7 +195,7 @@ export default function AccountPage() {
         ) : isInvestor ? (
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="rounded-full bg-indigo-100 dark:bg-indigo-900/50 px-3 py-1 text-sm font-semibold text-indigo-700 dark:text-indigo-300">
+              <span className="bg-[#0038a8] px-3 py-1 text-sm font-semibold text-white">
                 Investor
               </span>
               <span className="text-sm text-gray-500 dark:text-gray-400">Capital gains reporting enabled</span>
@@ -207,12 +207,12 @@ export default function AccountPage() {
         ) : (
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="rounded-full bg-gray-100 dark:bg-gray-700 px-3 py-1 text-sm font-semibold text-gray-600 dark:text-gray-300">
+              <span className="border border-gray-400 dark:border-gray-500 px-3 py-1 text-sm font-semibold text-gray-600 dark:text-gray-300">
                 Free
               </span>
               <span className="text-sm text-gray-500 dark:text-gray-400">Reports locked</span>
             </div>
-            <Link href="/pricing" className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300">
+            <Link href="/pricing" className="text-sm font-medium text-[#0038a8] dark:text-blue-400 hover:underline">
               Upgrade to Investor →
             </Link>
           </div>

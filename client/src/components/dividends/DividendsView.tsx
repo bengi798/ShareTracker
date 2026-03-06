@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Trade, SharesTrade } from '@/lib/types';
 import { Spinner } from '@/components/ui/Spinner';
+import { Select } from '@/components/ui/Select';
 
 // EODHD exchange code mapping
 const EXCHANGE_CODES: Record<string, string> = {
@@ -173,7 +174,7 @@ export function DividendsView({ trades }: { trades: Trade[] }) {
 
   if (shareOptions.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 py-16 text-center">
+      <div className="border border-dashed border-gray-400 dark:border-gray-600 py-16 text-center">
         <p className="text-base font-medium text-gray-500 dark:text-gray-400">No shares trades recorded yet.</p>
         <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">Add a shares trade to see dividend history.</p>
       </div>
@@ -187,7 +188,7 @@ export function DividendsView({ trades }: { trades: Trade[] }) {
         <label htmlFor="share-select" className="text-sm font-medium text-gray-700 dark:text-gray-300">
           Share
         </label>
-        <select
+        <Select
           id="share-select"
           value={selectedKey}
           onChange={e => {
@@ -195,14 +196,14 @@ export function DividendsView({ trades }: { trades: Trade[] }) {
             setDividends([]);
             setError(null);
           }}
-          className="rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          className="w-auto"
         >
           {shareOptions.map(o => (
             <option key={`${o.ticker}|${o.exchange}`} value={`${o.ticker}|${o.exchange}`}>
               {o.ticker} · {o.exchange}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       {/* Ownership period note */}
@@ -222,7 +223,7 @@ export function DividendsView({ trades }: { trades: Trade[] }) {
       )}
 
       {!loading && !error && dividends.length === 0 && selectedOption && (
-        <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 py-12 text-center">
+        <div className="border border-dashed border-gray-400 dark:border-gray-600 py-12 text-center">
           <p className="text-sm text-gray-500 dark:text-gray-400">
             No dividends found for {selectedOption.ticker} during the ownership period.
           </p>
@@ -232,7 +233,7 @@ export function DividendsView({ trades }: { trades: Trade[] }) {
       {!loading && !error && dividends.length > 0 && (
         <>
           {/* Summary card */}
-          <div className="flex flex-wrap gap-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm">
+          <div className="flex flex-wrap gap-10 border border-gray-900 dark:border-gray-500 bg-white dark:bg-zinc-900 p-5">
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Dividend Events</p>
               <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{dividends.length}</p>
@@ -248,9 +249,9 @@ export function DividendsView({ trades }: { trades: Trade[] }) {
           </div>
 
           {/* Dividends table */}
-          <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className="overflow-hidden border border-gray-900 dark:border-gray-500">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800 text-sm">
+              <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-zinc-900 text-sm">
                 <thead>
                   <tr className="text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
                     <th className="px-4 py-3">Ex-Date</th>
@@ -270,7 +271,7 @@ export function DividendsView({ trades }: { trades: Trade[] }) {
                       : 0;
                     const total = d.value * units;
                     return (
-                      <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                      <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
                         <td className="whitespace-nowrap px-4 py-3 text-gray-600 dark:text-gray-400">
                           {fmtDate(d.date)}
                         </td>
