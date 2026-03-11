@@ -7,6 +7,7 @@ import { useTrades } from '@/hooks/useTradesApi';
 import { usePortfolios } from '@/hooks/usePortfolios';
 import { useSharesQuotes } from '@/hooks/useSharesQuotes';
 import { useCryptoQuotes } from '@/hooks/useCryptoQuotes';
+import { useGoldQuotes } from '@/hooks/useGoldQuotes';
 import { PortfolioView } from '@/components/portfolio/PortfolioView';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
@@ -19,6 +20,7 @@ export default function PortfolioPage() {
   const { portfolios, loading: portfoliosLoading, createPortfolio } = usePortfolios();
   const { sharesQuotes, sharesQuotesLoading }                     = useSharesQuotes();
   const { cryptoQuotes, cryptoQuotesLoading }                     = useCryptoQuotes();
+  const { goldQuotes, goldQuotesLoading }                         = useGoldQuotes();
   const quotes = [...sharesQuotes, ...cryptoQuotes];
   const quotesLoading = sharesQuotesLoading && cryptoQuotesLoading;
 
@@ -63,6 +65,8 @@ export default function PortfolioPage() {
           trades={trades}
           quotes={quotes}
           quotesLoading={quotesLoading}
+          goldQuotes={goldQuotes}
+          goldQuotesLoading={goldQuotesLoading}
           homeCurrency={homeCurrency ?? 'AUD'}
           portfolios={portfolios}
           selectedPortfolioId={selectedPortfolioId}

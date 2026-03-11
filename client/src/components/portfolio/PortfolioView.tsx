@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { Trade, Quote, SharesQuote, CryptoQuote, Portfolio } from '@/lib/types';
+import type { Trade, Quote, SharesQuote, CryptoQuote, GoldQuote, Portfolio } from '@/lib/types';
 import {
   computePositions,
   hasAnyPosition,
@@ -343,11 +343,181 @@ function CryptoCategorySection({
   );
 }
 
+// ── Gold category table ───────────────────────────────────────────────
+function GoldCategorySection({
+  positions,
+  quotes,
+  quotesLoading,
+  displayMode,
+  homeCurrency,
+  rates,
+}: {
+  positions:     GoldPosition[];
+  quotes:        GoldQuote[];
+  quotesLoading: boolean;
+  displayMode:   string;
+  homeCurrency:  string;
+  rates:         Record<string, number>;
+}) {
+  if (positions.length === 0) return null;
+
+  function fmtVal(amount: number, currency: string) {
+    const c = normCurrency(currency);
+    return displayMode === 'home'
+      ? fmtCurrency(toAud(amount, c, rates), homeCurrency)
+      : fmtCurrency(amount, c);
+  }
+
+  function fmtCost(amount: number) {
+    return displayMode === 'home'
+      ? fmtCurrency(amount, homeCurrency)
+      : fmtCurrency(amount, 'AUD');
+  }
+
+  const subtotal = positions.reduce((s, p) =>
+    s + (displayMode === 'home' ? p.totalCostHome : p.totalCost), 0);
+  const subtotalCurrency = displayMode === 'home' ? homeCurrency : 'AUD';
+
+  return (
+    <div className="overflow-hidden border border-gray-900 dark:border-gray-500">
+      <div className={`flex items-center justify-between border-b px-4 py-3 ${CAT_STYLES.Gold.header}`}>
+        <div className="flex items-center gap-2">
+          <span className="font-semibold">Gold</span>
+          {quotesLoading && (
+            <span className="text-xs font-normal text-blue-500 dark:text-blue-400">fetching prices…</span>
+          )}
+        </div>
+        <span className="text-sm font-medium">{fmtCurrency(subtotal, subtotalCurrency)}</span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-zinc-900 text-sm">
+          <thead>
+            <tr className="text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              <th className="w-[20%] px-3 py-2">Description</th>
+              <th className="w-[8%]  px-3 py-2 text-right">Units</th>
+              <th className="w-[14%] px-3 py-2 text-right">Avg Cost</th>
+              <th className="w-[14%] px-3 py-2 text-right">Total Cost</th>
+              <th className="w-[14%] px-3 py-2 text-right">Spot (AUD/oz)</th>
+              <th className="w-[14%] px-3 py-2 text-right">Mkt Value</th>
+              <th className="w-[16%] px-3 py-2 text-right">P&amp;L</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
+            {positions.map((p, i) => {
+              const quote = quotes.find(
+                q => q.purityCarats === p.purityCarats && q.weightUnit === p.weightUnit,
+              );
+              const pricePerUnit = quote?.pricePerUnit ?? null;
+              const spotUsd      = quote?.spotUsdPerTroyOz ?? null;
+              const currentValue = pricePerUnit !== null ? pricePerUnit * p.availableUnits : null;
+              const rateUSD      = rates['USD'] ?? 1;
+              const rateCcy      = rates[normCurrency(p.currency)] ?? 1;
+              const totalCostUSD = rateUSD > 0 ? p.totalCost * rateCcy / rateUSD : p.totalCost;
+              const pnl          = currentValue !== null ? currentValue - totalCostUSD : null;
+
+              return (
+                <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
+                  <td className="w-[20%] px-3 py-3 font-medium text-gray-900 dark:text-white">{goldDesc(p)}</td>
+                  <td className="w-[8%]  px-3 py-3 text-right text-gray-700 dark:text-gray-300">{fmtUnits(p.availableUnits)}</td>
+                  <td className="w-[14%] px-3 py-3 text-right text-gray-700 dark:text-gray-300 whitespace-nowrap">{fmtCost(displayMode === 'home' ? p.avgCostHomePerUnit : p.avgCostPerUnit)}</td>
+                  <td className="w-[14%] px-3 py-3 text-right font-medium text-gray-900 dark:text-white whitespace-nowrap">{fmtCost(displayMode === 'home' ? p.totalCostHome : p.totalCost)}</td>
+                  <td className="w-[14%] px-3 py-3 text-right text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                    {spotUsd !== null ? fmtCurrency(spotUsd, 'USD') : '—'}
+                  </td>
+                  <td className="w-[14%] px-3 py-3 text-right text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                    {currentValue !== null ? fmtVal(currentValue, 'USD') : '—'}
+                  </td>
+                  <td className={`w-[16%] px-3 py-3 text-right font-medium whitespace-nowrap ${
+                    pnl === null ? 'text-gray-400' : pnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                  }`}>
+                    {pnl === null ? '—' : `${pnl >= 0 ? '+' : ''}${fmtVal(pnl, 'USD')}`}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ── Bond category table ───────────────────────────────────────────────
+function BondCategorySection({
+  positions,
+  displayMode,
+  homeCurrency,
+}: {
+  positions:    BondPosition[];
+  displayMode:  string;
+  homeCurrency: string;
+}) {
+  if (positions.length === 0) return null;
+
+  function fmtCost(amount: number, currency: string) {
+    const c = normCurrency(currency);
+    return displayMode === 'home'
+      ? fmtCurrency(amount, homeCurrency)
+      : fmtCurrency(amount, c);
+  }
+
+  const subtotal = positions.reduce((s, p) =>
+    s + (displayMode === 'home' ? p.totalCostHome : p.totalCost), 0);
+  const subtotalCurrency = displayMode === 'home' ? homeCurrency : 'AUD';
+
+  return (
+    <div className="overflow-hidden border border-gray-900 dark:border-gray-500">
+      <div className={`flex items-center justify-between border-b px-4 py-3 ${CAT_STYLES.Bond.header}`}>
+        <span className="font-semibold">Bonds</span>
+        <span className="text-sm font-medium">{fmtCurrency(subtotal, subtotalCurrency)}</span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-zinc-900 text-sm">
+          <thead>
+            <tr className="text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              <th className="w-[22%] px-3 py-2">Description</th>
+              <th className="w-[8%]  px-3 py-2 text-right">Units</th>
+              <th className="w-[10%] px-3 py-2 text-right">Yield</th>
+              <th className="w-[14%] px-3 py-2 text-right">Maturity</th>
+              <th className="w-[14%] px-3 py-2 text-right">Avg Cost</th>
+              <th className="w-[14%] px-3 py-2 text-right">Cost Basis</th>
+              <th className="w-[18%] px-3 py-2 text-right">Est. Annual Income</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
+            {positions.map((p, i) => {
+              const annualIncome = p.availableUnits * p.avgCostPerUnit * (p.yieldPercent / 100);
+              return (
+                <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
+                  <td className="w-[22%] px-3 py-3 font-medium text-gray-900 dark:text-white">{bondDesc(p)}</td>
+                  <td className="w-[8%]  px-3 py-3 text-right text-gray-700 dark:text-gray-300">{fmtUnits(p.availableUnits)}</td>
+                  <td className="w-[10%] px-3 py-3 text-right text-teal-700 dark:text-teal-400 font-medium">{p.yieldPercent}%</td>
+                  <td className="w-[14%] px-3 py-3 text-right text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                    {new Date(p.maturityDate + 'T00:00:00').toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </td>
+                  <td className="w-[14%] px-3 py-3 text-right text-gray-700 dark:text-gray-300 whitespace-nowrap">{fmtCost(displayMode === 'home' ? p.avgCostHomePerUnit : p.avgCostPerUnit, p.currency)}</td>
+                  <td className="w-[14%] px-3 py-3 text-right font-medium text-gray-900 dark:text-white whitespace-nowrap">{fmtCost(displayMode === 'home' ? p.totalCostHome : p.totalCost, p.currency)}</td>
+                  <td className="w-[18%] px-3 py-3 text-right font-medium text-teal-700 dark:text-teal-400 whitespace-nowrap">
+                    {fmtCost(annualIncome, p.currency)}
+                    <span className="ml-1 text-xs font-normal text-gray-400 dark:text-gray-500">p.a.</span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────
 export function PortfolioView({
   trades,
   quotes,
   quotesLoading,
+  goldQuotes,
+  goldQuotesLoading,
   homeCurrency,
   portfolios = [],
   selectedPortfolioId = null,
@@ -356,6 +526,8 @@ export function PortfolioView({
   trades:               Trade[];
   quotes:               Quote[];
   quotesLoading:        boolean;
+  goldQuotes:           GoldQuote[];
+  goldQuotesLoading:    boolean;
   homeCurrency:         string;
   portfolios?:          Portfolio[];
   selectedPortfolioId?: string | null;
@@ -447,12 +619,19 @@ export function PortfolioView({
       return sum + (displayMode === 'home' ? toAud(raw, rawCurrency, rates) : raw);
     }, 0);
 
-    const otherValue = [...visibleGold, ...visibleBonds, ...visibleProperty].reduce((sum, p) => {
+    const goldValue = visibleGold.reduce((sum, p) => {
+      const q   = goldQuotes.find(q => q.purityCarats === p.purityCarats && q.weightUnit === p.weightUnit);
+      const raw = q?.pricePerUnit != null ? q.pricePerUnit * p.availableUnits : p.totalCost;
+      const rawCurrency = q?.pricePerUnit != null ? 'USD' : p.currency;
+      return sum + (displayMode === 'home' ? toAud(raw, rawCurrency, rates) : raw);
+    }, 0);
+
+    const otherValue = [...visibleBonds, ...visibleProperty].reduce((sum, p) => {
       return sum + (displayMode === 'home' ? toAud(p.totalCost, p.currency, rates) : p.totalCost);
     }, 0);
 
-    return sharesValue + cryptoValue + otherValue;
-  }, [visibleShares, visibleCrypto, visibleGold, visibleBonds, visibleProperty, sharesQuotes, cryptoQuotes, displayMode, rates]);
+    return sharesValue + cryptoValue + goldValue + otherValue;
+  }, [visibleShares, visibleCrypto, visibleGold, visibleBonds, visibleProperty, sharesQuotes, cryptoQuotes, goldQuotes, displayMode, rates]);
 
   const totalPnl = totalMarketValue - grandTotal;
 
@@ -472,8 +651,6 @@ export function PortfolioView({
       };
     });
 
-  const goldRows     = useMemo(() => makeRows(visibleGold,     goldDesc),     [visibleGold,     displayMode]); // eslint-disable-line react-hooks/exhaustive-deps
-  const bondRows     = useMemo(() => makeRows(visibleBonds,    bondDesc),     [visibleBonds,    displayMode]); // eslint-disable-line react-hooks/exhaustive-deps
   const propertyRows = useMemo(() => makeRows(visibleProperty, propertyDesc), [visibleProperty, displayMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const hasPositions = useMemo(() => hasAnyPosition(positions), [positions]);
@@ -636,12 +813,13 @@ export function PortfolioView({
         />
       )}
 
-      <CategorySection
-        label="Gold"
-        subtotal={goldRows.reduce((s, r) => s + r.totalCost, 0)}
-        subtotalCurrency={summaryCurrency}
-        rows={goldRows}
-        style={CAT_STYLES.Gold}
+      <GoldCategorySection
+        positions={visibleGold}
+        quotes={goldQuotes}
+        quotesLoading={goldQuotesLoading}
+        displayMode={displayMode}
+        homeCurrency={homeCurrency}
+        rates={rates}
       />
 
       {visibleCrypto.length > 0 && (
@@ -656,12 +834,10 @@ export function PortfolioView({
         />
       )}
 
-      <CategorySection
-        label="Bonds"
-        subtotal={bondRows.reduce((s, r) => s + r.totalCost, 0)}
-        subtotalCurrency={summaryCurrency}
-        rows={bondRows}
-        style={CAT_STYLES.Bond}
+      <BondCategorySection
+        positions={visibleBonds}
+        displayMode={displayMode}
+        homeCurrency={homeCurrency}
       />
 
       <CategorySection

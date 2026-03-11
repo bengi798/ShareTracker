@@ -149,7 +149,7 @@ interface SellMetrics {
   splitNonDiscountedTaxable: number;
 }
 
-function computeAllSellMetrics(allTrades: Trade[]): Map<string, SellMetrics> {
+function computeAllSellMetrics(allTrades: Trade[], isForeignResident: boolean): Map<string, SellMetrics> {
   const byAsset = new Map<string, Trade[]>();
   for (const trade of allTrades) {
     const key = assetKey(trade);
@@ -205,7 +205,7 @@ function computeAllSellMetrics(allTrades: Trade[]): Map<string, SellMetrics> {
           const buyDate         = new Date(lot.date + 'T00:00:00');
           const oneYearAfterBuy = new Date(buyDate);
           oneYearAfterBuy.setFullYear(oneYearAfterBuy.getFullYear() + 1);
-          const discountApplies = lotGain > 0 && sellDate > oneYearAfterBuy;
+          const discountApplies = !isForeignResident && lotGain > 0 && sellDate > oneYearAfterBuy;
 
           if (discountApplies) {
             anyDiscount        = true;
@@ -235,7 +235,7 @@ function computeAllSellMetrics(allTrades: Trade[]): Map<string, SellMetrics> {
 
 // ── Main component ─────────────────────────────────────────────────────
 export function ReportsView({ trades }: { trades: Trade[] }) {
-  const { token } = useAuth();
+  const { token, isForeignResident } = useAuth();
   const audTrades = useMemo(
     () => trades.filter(t => !t.currency || t.currency === 'AUD'),
     [trades],
@@ -433,7 +433,7 @@ export function ReportsView({ trades }: { trades: Trade[] }) {
       .sort((a, b) => a.dateOfTrade.localeCompare(b.dateOfTrade));
   }, [audTrades, selectedFY]);
 
-  const allSellMetrics = useMemo(() => computeAllSellMetrics(audTrades), [audTrades]);
+  const allSellMetrics = useMemo(() => computeAllSellMetrics(audTrades, isForeignResident ?? false), [audTrades, isForeignResident]);
 
   const sellMetrics = useMemo(() => {
     const map = new Map<string, SellMetrics>();

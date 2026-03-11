@@ -20,6 +20,12 @@ public interface IMarketDataService
         CancellationToken ct = default);
 
     /// <summary>
+    /// Returns the real-time price for a FOREX or commodity symbol (e.g. "XAUUSD.FOREX").
+    /// Returns null if the price could not be retrieved.
+    /// </summary>
+    Task<decimal?> GetRealTimePriceAsync(string symbol, CancellationToken ct = default);
+
+    /// <summary>
     /// Returns dividend records for the given symbol (e.g. "BHP.AU") from <paramref name="from"/> onwards.
     /// Returns an empty list on failure.
     /// </summary>

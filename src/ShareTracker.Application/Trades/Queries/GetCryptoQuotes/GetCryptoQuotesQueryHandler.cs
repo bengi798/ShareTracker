@@ -13,15 +13,18 @@ public class GetCryptoQuotesQueryHandler
     private readonly ITradeRepository    _trades;
     private readonly ICurrentUserService _currentUser;
     private readonly IMarketDataService  _marketData;
+    private readonly ICoinGeckoService   _coinGecko;
 
     public GetCryptoQuotesQueryHandler(
         ITradeRepository    trades,
         ICurrentUserService currentUser,
-        IMarketDataService  marketData)
+        IMarketDataService  marketData,
+        ICoinGeckoService   coinGecko)
     {
         _trades      = trades;
         _currentUser = currentUser;
         _marketData  = marketData;
+        _coinGecko   = coinGecko;
     }
 
     public async Task<IReadOnlyList<CryptoQuoteDto>> Handle(
@@ -46,26 +49,33 @@ public class GetCryptoQuotesQueryHandler
         if (positions.Count == 0)
             return Array.Empty<CryptoQuoteDto>();
 
-        // 2. Map Exchange enum → EODHD exchange code
+        // 2. Map coin symbols → EODHD format and fetch USD closing prices
         var symbols = positions
-            .Select(p => (p.CoinSymbol+"-USD", ExchangeCode: ToEodhdExchangeCode()))
+            .Select(p => (p.CoinSymbol + "-USD", ExchangeCode: ToEodhdExchangeCode()))
             .ToList();
 
-        // 3. Fetch closing prices (cached per day)
-        var prices = await _marketData.GetLatestClosingPricesAsync(symbols, cancellationToken);
+        // 3. Fetch USD prices (EODHD, cached per day) and AUD prices (CoinGecko, cached 5 min) in parallel
+        var coinSymbolList = positions.Select(p => p.CoinSymbol).ToList();
+        var pricesTask    = _marketData.GetLatestClosingPricesAsync(symbols, cancellationToken);
+        var audPricesTask = _coinGecko.GetAudPricesAsync(coinSymbolList, cancellationToken);
+        await Task.WhenAll(pricesTask, audPricesTask);
+        var prices    = pricesTask.Result;
+        var audPrices = audPricesTask.Result;
 
         // 4. Build DTOs
+        var asOf = DateOnly.FromDateTime(DateTime.UtcNow.Date);
         return positions
             .Select(p =>
             {
-                var exchangeCode = ToEodhdExchangeCode();
-                var key          = $"{p.CoinSymbol.ToUpperInvariant()}-USD.{exchangeCode}";
-                var hasPrice     = prices.TryGetValue(key, out var close) && close.HasValue;
+                var key      = $"{p.CoinSymbol.ToUpperInvariant()}-USD.{ToEodhdExchangeCode()}";
+                var hasUsd   = prices.TryGetValue(key, out var close) && close.HasValue;
+                audPrices.TryGetValue(p.CoinSymbol, out var audClose);
 
                 return new CryptoQuoteDto(
                     CoinSymbol:    p.CoinSymbol.ToUpperInvariant(),
-                    LastClose: hasPrice ? close : null,
-                    AsOf:      hasPrice ? DateOnly.FromDateTime(DateTime.UtcNow.Date) : null);
+                    LastClose:     hasUsd   ? close    : null,
+                    LastCloseAud:  audClose,
+                    AsOf:          hasUsd || audClose.HasValue ? asOf : null);
             })
             .ToList();
     }

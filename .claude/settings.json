@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la /Users/ben/Documents/GitHub/ShareTracker/client/src/app/\\\\\\(app\\\\\\)/)"
+    ]
+  }
+}

@@ -178,8 +178,18 @@ export interface CryptoQuote extends QuoteBase {
   coinSymbol: string;
 }
 
+export interface GoldQuote {
+  assetType:       'Gold';
+  purityCarats:    number;
+  weightUnit:      string;
+  netUnits:        number;
+  spotUsdPerTroyOz: number | null;
+  pricePerUnit:    number | null;  // adjusted for purity & weight unit, in USD
+  asOf:            string | null;
+}
+
 // Extend here as new asset-type quote sources are added
-export type Quote = SharesQuote | CryptoQuote;
+export type Quote = SharesQuote | CryptoQuote | GoldQuote;
 
 // ── Auth ──────────────────────────────────────────────────────────────
 export interface AuthResult {

@@ -15,6 +15,7 @@ using ShareTracker.Application.Trades.Commands.UpdateSharesTrade;
 using ShareTracker.Application.Trades.Queries.GetAllTrades;
 using ShareTracker.Application.Trades.Queries.GetSharesQuotes;
 using ShareTracker.Application.Trades.Queries.GetCryptoQuotes;
+using ShareTracker.Application.Trades.Queries.GetGoldQuotes;
 using ShareTracker.Application.Trades.Queries.GetTradeById;
 
 namespace ShareTracker.API.Controllers;
@@ -101,6 +102,10 @@ public class TradesController : ControllerBase
     [HttpGet("crypto/quotes")]
     public async Task<IActionResult> GetCryptoQuotes(CancellationToken ct) =>
         Ok(await _mediator.Send(new GetCryptoQuotesQuery(), ct));
+
+    [HttpGet("gold/quotes")]
+    public async Task<IActionResult> GetGoldQuotes(CancellationToken ct) =>
+        Ok(await _mediator.Send(new GetGoldQuotesQuery(), ct));
 
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)

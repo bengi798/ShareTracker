@@ -72,6 +72,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<ITradeRepository, TradeRepository>();
 builder.Services.AddScoped<IPortfolioRepository, PortfolioRepository>();
 builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();
+builder.Services.AddScoped<IBondCouponPaymentRepository, BondCouponPaymentRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
@@ -86,6 +87,14 @@ builder.Services.AddHttpClient("eodhd", client =>
 builder.Services.Configure<EodhdSettings>(
     builder.Configuration.GetSection("EodhdSettings"));
 builder.Services.AddScoped<IMarketDataService, EodhdMarketDataService>();
+
+// ── Infrastructure: Market data (CoinGecko — AUD crypto prices) ───────────────
+builder.Services.AddHttpClient("coingecko", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(10);
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+});
+builder.Services.AddScoped<ICoinGeckoService, CoinGeckoService>();
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
 var allowedOrigins = builder.Configuration

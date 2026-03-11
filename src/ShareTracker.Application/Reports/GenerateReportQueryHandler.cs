@@ -22,22 +22,31 @@ public class GenerateReportQueryHandler
     private readonly ICurrentUserService _currentUser;
     private readonly IReportGeneratorService _generator;
     private readonly IMarketDataService _marketData;
+    private readonly IUserProfileRepository _userProfiles;
+    private readonly IBondCouponPaymentRepository _bondCoupons;
 
     public GenerateReportQueryHandler(
         ITradeRepository trades,
         ICurrentUserService currentUser,
         IReportGeneratorService generator,
-        IMarketDataService marketData)
+        IMarketDataService marketData,
+        IUserProfileRepository userProfiles,
+        IBondCouponPaymentRepository bondCoupons)
     {
         _trades = trades;
         _currentUser = currentUser;
         _generator = generator;
         _marketData = marketData;
+        _userProfiles = userProfiles;
+        _bondCoupons = bondCoupons;
     }
 
     public async Task<(byte[] Bytes, string ContentType, string FileName)> Handle(
         GenerateReportQuery request, CancellationToken cancellationToken)
     {
+        var profile = await _userProfiles.GetByClerkUserIdAsync(_currentUser.UserId, cancellationToken);
+        var isForeignResident = profile?.IsForeignResident ?? false;
+
         var allTrades = await _trades.GetAllByUserIdAsync(_currentUser.UserId, cancellationToken);
 
         // Only AUD-denominated trades are included
@@ -61,7 +70,7 @@ public class GenerateReportQueryHandler
         bool anyDiscount = false;
 
         // FIFO sell metrics across all FYs so lot pools carry over correctly
-        var allSellMetrics = ComputeAllSellMetrics(audTrades);
+        var allSellMetrics = ComputeAllSellMetrics(audTrades, isForeignResident);
 
         foreach (var trade in fyTrades)
         {
@@ -111,6 +120,24 @@ public class GenerateReportQueryHandler
         // ── Dividends ─────────────────────────────────────────────────────────
         var dividendRows = await FetchDividendsAsync(audTrades, fyStart, fyEnd, cancellationToken);
 
+        // ── Bond coupon income ────────────────────────────────────────────────
+        var allCoupons = await _bondCoupons.GetAllByUserIdAsync(_currentUser.UserId, cancellationToken);
+
+        // Build a lookup of BondTradeId → description for labelling
+        var bondTradeDescriptions = audTrades
+            .OfType<BondTrade>()
+            .ToDictionary(bt => bt.Id, bt => $"{bt.BondCode} · {bt.YieldPercent}% · {bt.Issuer}");
+
+        var bondCouponRows = allCoupons
+            .Where(c => c.PaymentDate >= fyStart && c.PaymentDate <= fyEnd)
+            .Select(c => new BondCouponRow(
+                PaymentDate:     c.PaymentDate,
+                BondDescription: bondTradeDescriptions.TryGetValue(c.BondTradeId, out var desc) ? desc : c.BondTradeId.ToString(),
+                Amount:          c.Amount,
+                Currency:        c.Currency))
+            .OrderBy(c => c.PaymentDate)
+            .ToList();
+
         var reportData = new ReportData(
             FinancialYear:     request.FinancialYear,
             TotalProceeds:     totalProceeds,
@@ -118,9 +145,11 @@ public class GenerateReportQueryHandler
             NetGainLoss:       netGainLoss,
             NetTaxableGain:    netTaxableGain,
             AnyDiscountApplied: anyDiscount,
+            IsForeignResident: isForeignResident,
             ExcludedNonAudCount: excludedCount,
             Rows:              rows,
-            DividendRows:      dividendRows);
+            DividendRows:      dividendRows,
+            BondCouponRows:    bondCouponRows);
 
         var format = request.Format.ToLowerInvariant();
         if (format == "csv")
@@ -156,8 +185,8 @@ public class GenerateReportQueryHandler
 
     // Processes all AUD trades using FIFO lot tracking so that when a sale spans
     // buy lots with different holding periods, the 50% CGT discount is applied
-    // only to the portion held for more than 12 months.
-    private static Dictionary<Guid, SellResult> ComputeAllSellMetrics(IReadOnlyList<Trade> audTrades)
+    // only to the portion held for more than 12 months (Australian residents only).
+    private static Dictionary<Guid, SellResult> ComputeAllSellMetrics(IReadOnlyList<Trade> audTrades, bool isForeignResident)
     {
         var byAsset = audTrades
             .GroupBy(AssetKey)
@@ -213,7 +242,8 @@ public class GenerateReportQueryHandler
                         totalCostBasis  += lotCostBasis;
 
                         var oneYearAfterBuy = lot.Date.AddYears(1);
-                        var discountApplies = lotGain > 0 && sellDate > oneYearAfterBuy;
+                        // Foreign residents are not entitled to the 50% CGT discount
+                        var discountApplies = !isForeignResident && lotGain > 0 && sellDate > oneYearAfterBuy;
 
                         if (discountApplies)
                         {

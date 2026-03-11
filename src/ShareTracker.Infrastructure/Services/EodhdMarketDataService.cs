@@ -103,6 +103,37 @@ public class EodhdMarketDataService : IMarketDataService
         }
     }
 
+    public async Task<decimal?> GetRealTimePriceAsync(string symbol, CancellationToken ct = default)
+    {
+        var cacheKey = $"eodhd:realtime:{symbol}:{DateTime.UtcNow:yyyyMMddHH}"; // cache per hour
+        if (_cache.TryGetValue(cacheKey, out decimal? cached)) return cached;
+
+        try
+        {
+            var url = $"{_settings.BaseUrl}/real-time/{Uri.EscapeDataString(symbol)}?api_token={_settings.ApiToken}&fmt=json";
+            var client   = _httpFactory.CreateClient("eodhd");
+            var response = await client.GetAsync(url, ct);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("EODHD real-time returned {StatusCode} for {Symbol}", response.StatusCode, symbol);
+                return null;
+            }
+
+            var json  = await response.Content.ReadAsStringAsync(ct);
+            var bar   = JsonSerializer.Deserialize<EodhdRealTimeBar>(json, JsonOpts);
+            var price = bar?.Close;
+
+            _cache.Set(cacheKey, price, TimeSpan.FromHours(1));
+            return price;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch EODHD real-time price for {Symbol}", symbol);
+            return null;
+        }
+    }
+
     public async Task<IReadOnlyList<MarketDividend>> GetDividendsAsync(
         string symbol,
         DateOnly from,
@@ -170,6 +201,12 @@ public class EodhdMarketDataService : IMarketDataService
         [property: JsonPropertyName("close")]          decimal? Close,
         [property: JsonPropertyName("adjusted_close")] decimal? AdjustedClose,
         [property: JsonPropertyName("volume")]         long?    Volume);
+
+    private record EodhdRealTimeBar(
+        [property: JsonPropertyName("close")]  decimal? Close,
+        [property: JsonPropertyName("open")]   decimal? Open,
+        [property: JsonPropertyName("high")]   decimal? High,
+        [property: JsonPropertyName("low")]    decimal? Low);
 
     private record EodhdDividendRecord(
         [property: JsonPropertyName("date")]         string?  Date,

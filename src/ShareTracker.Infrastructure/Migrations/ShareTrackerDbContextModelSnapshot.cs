@@ -22,6 +22,47 @@ namespace ShareTracker.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("ShareTracker.Domain.Entities.BondCouponPayment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<Guid>("BondTradeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateOnly>("PaymentDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BondTradeId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("BondCouponPayments");
+                });
+
             modelBuilder.Entity("ShareTracker.Domain.Entities.Portfolio", b =>
                 {
                     b.Property<Guid>("Id")
@@ -139,6 +180,17 @@ namespace ShareTracker.Infrastructure.Migrations
                     b.HasKey("ClerkUserId");
 
                     b.ToTable("UserProfiles");
+                });
+
+            modelBuilder.Entity("ShareTracker.Domain.Entities.BondCouponPayment", b =>
+                {
+                    b.HasOne("ShareTracker.Domain.Entities.BondTrade", "BondTrade")
+                        .WithMany()
+                        .HasForeignKey("BondTradeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("BondTrade");
                 });
 
             modelBuilder.Entity("ShareTracker.Domain.Entities.Trade", b =>

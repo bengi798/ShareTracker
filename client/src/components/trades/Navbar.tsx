@@ -44,6 +44,9 @@ export function Navbar() {
               <Link href="/dividends" className={navLink(pathname.startsWith('/dividends'))}>
                 Dividends
               </Link>
+              <Link href="/bond-coupons" className={navLink(pathname.startsWith('/bond-coupons'))}>
+                Bond Coupons
+              </Link>
               <Link href="/reports" className={navLink(pathname.startsWith('/reports'))}>
                 Reports
               </Link>

@@ -29,6 +29,15 @@ public class ReportGeneratorService : IReportGeneratorService
                     col.Item().Text(
                         $"Australian Financial Year: 1 July {data.FinancialYear - 1} – 30 June {data.FinancialYear}")
                         .FontSize(9).FontColor(Colors.Grey.Medium);
+                    if (data.IsForeignResident)
+                    {
+                        col.Item().PaddingTop(4)
+                            .Background(Colors.Blue.Lighten4)
+                            .Border(1).BorderColor(Colors.Blue.Medium)
+                            .Padding(5)
+                            .Text("Foreign resident for tax purposes — 50% CGT discount does not apply.")
+                            .FontSize(8).FontColor(Colors.Blue.Darken3);
+                    }
                     col.Item().PaddingTop(4).LineHorizontal(1).LineColor(Colors.Grey.Lighten2);
                 });
 
@@ -46,9 +55,11 @@ public class ReportGeneratorService : IReportGeneratorService
                             AddSummaryCell(row, "Total Cost Basis",      Fmt(data.TotalCostBasis));
                             AddSummaryCell(row, "Gross Capital Gain/(Loss)", FmtGain(data.NetGainLoss));
                             AddSummaryCell(row,
-                                data.AnyDiscountApplied
-                                    ? "Taxable Gain (50% CGT discount)"
-                                    : "Taxable Gain",
+                                data.IsForeignResident
+                                    ? "Taxable Gain (no CGT discount)"
+                                    : data.AnyDiscountApplied
+                                        ? "Taxable Gain (50% CGT discount)"
+                                        : "Taxable Gain",
                                 FmtGain(data.NetTaxableGain));
                         });
 
@@ -248,6 +259,72 @@ public class ReportGeneratorService : IReportGeneratorService
                                 }
                             });
                     }
+
+                    // ── Bond coupon income section ─────────────────────────────
+                    if (data.BondCouponRows.Count > 0)
+                    {
+                        col.Item().PaddingTop(8).Text("Bond Coupon Income")
+                            .FontSize(13).Bold().FontColor(Colors.Grey.Darken3);
+
+                        col.Item()
+                            .Background(Colors.Blue.Lighten4)
+                            .Border(1).BorderColor(Colors.Blue.Medium)
+                            .Padding(6)
+                            .Text("Bond coupon/interest payments are ordinary income, not capital gains. Report these separately in your tax return.")
+                            .FontSize(8).FontColor(Colors.Blue.Darken3);
+
+                        col.Item().Table(table =>
+                        {
+                            table.ColumnsDefinition(cols =>
+                            {
+                                cols.ConstantColumn(80);   // Payment Date
+                                cols.RelativeColumn(3);    // Bond
+                                cols.ConstantColumn(80);   // Currency
+                                cols.ConstantColumn(90);   // Amount
+                            });
+
+                            table.Header(h =>
+                            {
+                                static void CouponHdr(IContainer cell, string text, bool right = false)
+                                {
+                                    var styled = cell.Background(Colors.Teal.Darken2).Padding(5);
+                                    var t = right ? styled.AlignRight().Text(text) : styled.Text(text);
+                                    t.FontColor(Colors.White).Bold().FontSize(8);
+                                }
+                                CouponHdr(h.Cell(), "Payment Date");
+                                CouponHdr(h.Cell(), "Bond");
+                                CouponHdr(h.Cell(), "Currency");
+                                CouponHdr(h.Cell(), "Amount", right: true);
+                            });
+
+                            uint idx = 0;
+                            foreach (var row in data.BondCouponRows)
+                            {
+                                var bg = idx % 2 == 0 ? Colors.White : Colors.Grey.Lighten5;
+                                idx++;
+                                DataCell(table, row.PaymentDate.ToString("dd MMM yyyy"), bg);
+                                DataCell(table, row.BondDescription, bg);
+                                DataCell(table, row.Currency, bg);
+                                DataCell(table, $"{row.Currency} {row.Amount:N2}", bg, right: true, color: Colors.Teal.Darken2);
+                            }
+                        });
+
+                        // Totals by currency
+                        var couponByCurrency = data.BondCouponRows
+                            .GroupBy(r => r.Currency)
+                            .Select(g => new { Currency = g.Key, Total = g.Sum(r => r.Amount) })
+                            .OrderBy(g => g.Currency)
+                            .ToList();
+
+                        col.Item()
+                            .Border(1).BorderColor(Colors.Grey.Lighten2)
+                            .Padding(8)
+                            .Row(row =>
+                            {
+                                foreach (var g in couponByCurrency)
+                                    AddSummaryCell(row, $"Total Bond Income ({g.Currency})", $"{g.Currency} {g.Total:N2}");
+                            });
+                    }
                 });
 
                 page.Footer().AlignCenter().Text(x =>
@@ -315,7 +392,9 @@ public class ReportGeneratorService : IReportGeneratorService
         csv.WriteField(data.NetGainLoss);
         csv.NextRecord();
 
-        csv.WriteField(data.AnyDiscountApplied ? "Taxable Gain (50% CGT discount applied)" : "Taxable Gain");
+        csv.WriteField(data.IsForeignResident
+            ? "Taxable Gain (foreign resident — no CGT discount)"
+            : data.AnyDiscountApplied ? "Taxable Gain (50% CGT discount applied)" : "Taxable Gain");
         csv.WriteField(data.NetTaxableGain);
         csv.NextRecord();
 
@@ -386,6 +465,43 @@ public class ReportGeneratorService : IReportGeneratorService
                     csv.WriteField(g.FrankingCredits);
                     csv.NextRecord();
                 }
+            }
+        }
+
+        // ── Bond coupon income ────────────────────────────────────────────────
+        if (data.BondCouponRows.Count > 0)
+        {
+            csv.NextRecord();
+            csv.WriteField("BOND COUPON INCOME");
+            csv.NextRecord();
+
+            csv.WriteField("NOTE: Bond coupon/interest payments are ordinary income, not capital gains. Report these separately in your tax return.");
+            csv.NextRecord();
+
+            csv.WriteField("Payment Date");
+            csv.WriteField("Bond");
+            csv.WriteField("Currency");
+            csv.WriteField("Amount");
+            csv.NextRecord();
+
+            foreach (var row in data.BondCouponRows)
+            {
+                csv.WriteField(row.PaymentDate.ToString("yyyy-MM-dd"));
+                csv.WriteField(row.BondDescription);
+                csv.WriteField(row.Currency);
+                csv.WriteField(row.Amount);
+                csv.NextRecord();
+            }
+
+            csv.NextRecord();
+            csv.WriteField("BOND INCOME SUMMARY");
+            csv.NextRecord();
+
+            foreach (var g in data.BondCouponRows.GroupBy(r => r.Currency).OrderBy(g => g.Key))
+            {
+                csv.WriteField($"Total Bond Income ({g.Key})");
+                csv.WriteField(g.Sum(r => r.Amount));
+                csv.NextRecord();
             }
         }
 

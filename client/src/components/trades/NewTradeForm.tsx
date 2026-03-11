@@ -200,6 +200,9 @@ export function NewTradeForm({
   const [tradesLoading, setTradesLoading] = useState(false);
   const [selectedPositionKey, setSelectedPositionKey] = useState('');
 
+  // ── Ticker validation state ──────────────────────────────────────
+  const [tickerStatus, setTickerStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
+
   useEffect(() => {
     if (!token) return;
     setTradesLoading(true);
@@ -236,6 +239,8 @@ export function NewTradeForm({
   const pricePerUnitRaw = useWatch({ control, name: 'pricePerUnit' });
   const numberOfUnitsRaw = useWatch({ control, name: 'numberOfUnits' });
 
+  const tickerValue = useWatch({ control, name: 'ticker' });
+
   const exchangeDerivedCurrency = exchangeValue ? (EXCHANGE_CURRENCY_MAP[exchangeValue] ?? null) : null;
 
   // Auto-populate currency when exchange changes (Shares)
@@ -244,6 +249,32 @@ export function NewTradeForm({
       setValue('currency', exchangeDerivedCurrency);
     }
   }, [exchangeDerivedCurrency, assetType, setValue]);
+
+  // Auto-set isForeignTrade when exchange implies a non-home currency
+  useEffect(() => {
+    if (assetType === 'Shares' && exchangeDerivedCurrency && homeCurrency && exchangeDerivedCurrency !== homeCurrency) {
+      setValue('isForeignTrade', true);
+    }
+  }, [exchangeDerivedCurrency, assetType, homeCurrency, setValue]);
+
+  // Debounced ticker validation against EODHD
+  useEffect(() => {
+    if (assetType !== 'Shares' || !tickerValue || tickerValue.length < 1 || !exchangeValue || exchangeValue === 'Other') {
+      setTickerStatus('idle');
+      return;
+    }
+    setTickerStatus('checking');
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/trades/validate-ticker?ticker=${encodeURIComponent(tickerValue)}&exchange=${encodeURIComponent(exchangeValue)}`);
+        const json = await res.json();
+        setTickerStatus(json.valid ? 'valid' : 'invalid');
+      } catch {
+        setTickerStatus('idle');
+      }
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [tickerValue, exchangeValue, assetType]);
 
   const isSell = tradeType === 'Sell';
   const isPropertyBuy = assetType === 'Property' && !isSell;
@@ -637,7 +668,7 @@ export function NewTradeForm({
             </div>
             {isForeignTrade && (
               <div className="grid gap-5 sm:grid-cols-2">
-                {!exchangeDerivedCurrency && (
+                {assetType !== 'Shares' && (
                   <div className="max-w-xs">
                     <Label htmlFor="currency">Currency</Label>
                     <Select id="currency" {...register('currency', { required: 'Currency is required.' })}>
@@ -672,16 +703,30 @@ export function NewTradeForm({
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <div>
                   <Label htmlFor="ticker">Ticker symbol</Label>
-                  <Input
-                    id="ticker"
-                    placeholder="e.g. AAPL"
-                    {...register('ticker', {
-                      required: 'Ticker is required.',
-                      maxLength: { value: 10, message: 'Ticker must be 10 characters or fewer.' },
-                      pattern: { value: /^[A-Za-z0-9.]+$/, message: 'Ticker must be alphanumeric.' },
-                    })}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="ticker"
+                      placeholder="e.g. AAPL"
+                      {...register('ticker', {
+                        required: 'Ticker is required.',
+                        maxLength: { value: 10, message: 'Ticker must be 10 characters or fewer.' },
+                        pattern: { value: /^[A-Za-z0-9.]+$/, message: 'Ticker must be alphanumeric.' },
+                      })}
+                    />
+                    {tickerStatus === 'checking' && (
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">checking…</span>
+                    )}
+                    {tickerStatus === 'valid' && (
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-green-600 text-sm">✓</span>
+                    )}
+                    {tickerStatus === 'invalid' && (
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-red-500 text-sm">✗</span>
+                    )}
+                  </div>
                   {errors.ticker && <FormError message={errors.ticker.message!} />}
+                  {tickerStatus === 'invalid' && !errors.ticker && (
+                    <p className="mt-1 text-xs text-red-500">Ticker not found on this exchange.</p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="exchange">Exchange</Label>
@@ -691,14 +736,20 @@ export function NewTradeForm({
                   </Select>
                   {errors.exchange && <FormError message={errors.exchange.message!} />}
                 </div>
-                {exchangeDerivedCurrency && (
-                  <div>
-                    <Label htmlFor="currency-preview">Currency</Label>
-                    <Select id="currency-preview" value={exchangeDerivedCurrency} disabled>
+                <div>
+                  <Label htmlFor="currency">Currency</Label>
+                  {exchangeDerivedCurrency ? (
+                    <Select id="currency" value={exchangeDerivedCurrency} disabled>
                       <option value={exchangeDerivedCurrency}>{exchangeDerivedCurrency}</option>
                     </Select>
-                  </div>
-                )}
+                  ) : (
+                    <Select id="currency" {...register('currency', { required: isForeignTrade ? 'Currency is required.' : false })}>
+                      <option value="">Select currency…</option>
+                      {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </Select>
+                  )}
+                  {errors.currency && <FormError message={errors.currency.message!} />}
+                </div>
               </div>
               <div className={`mt-4 pt-4 border-t ${BROKERAGE_DIVIDER['Shares']}`}>
                 <BrokerageFeeSection
@@ -973,7 +1024,7 @@ export function NewTradeForm({
                     </div>
                     {isForeignTrade && (
                       <div className="grid gap-5 sm:grid-cols-2">
-                        {!exchangeDerivedCurrency && (
+                        {assetType !== 'Shares' && (
                           <div className="max-w-xs">
                             <Label htmlFor="currencySell">Currency</Label>
                             <Select id="currencySell" {...register('currency', { required: 'Currency is required.' })}>

@@ -28,6 +28,12 @@ public record DividendRow(
     decimal FrankingPercent,
     decimal FrankingCredit);
 
+public record BondCouponRow(
+    DateOnly PaymentDate,
+    string   BondDescription,
+    decimal  Amount,
+    string   Currency);
+
 public record ReportData(
     int FinancialYear,
     decimal TotalProceeds,
@@ -35,6 +41,8 @@ public record ReportData(
     decimal NetGainLoss,
     decimal NetTaxableGain,
     bool AnyDiscountApplied,
+    bool IsForeignResident,
     int ExcludedNonAudCount,
     IReadOnlyList<ReportRow> Rows,
-    IReadOnlyList<DividendRow> DividendRows);
+    IReadOnlyList<DividendRow> DividendRows,
+    IReadOnlyList<BondCouponRow> BondCouponRows);

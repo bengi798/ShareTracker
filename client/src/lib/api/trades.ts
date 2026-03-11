@@ -3,6 +3,7 @@ import type {
   Trade,
   SharesQuote,
   CryptoQuote,
+  GoldQuote,
   CreateSharesPayload,
   CreateGoldPayload,
   CreateCryptoPayload,
@@ -54,6 +55,9 @@ export const tradesApi = {
 
   getCryptoQuotes: (token: string) =>
     apiFetch<CryptoQuote[]>('/api/trades/crypto/quotes', { token }),
+
+  getGoldQuotes: (token: string) =>
+    apiFetch<GoldQuote[]>('/api/trades/gold/quotes', { token }),
 
   delete: (id: string, token: string) =>
     apiFetch<void>(`/api/trades/${id}`, { method: 'DELETE', token }),
