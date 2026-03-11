@@ -5,7 +5,9 @@ import Link from 'next/link';
 import { useClerk } from '@clerk/nextjs';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useIsInvestor } from '@/lib/auth/usePlan';
+import { usePortfolios } from '@/hooks/usePortfolios';
 import { CURRENCIES } from '@/lib/types';
+import type { Portfolio } from '@/lib/types';
 import { Button } from '@/components/ui/Button';
 import { Label } from '@/components/ui/Label';
 import { Select } from '@/components/ui/Select';
@@ -21,10 +23,115 @@ const THEME_OPTIONS: { value: ThemePref; label: string;}[] = [
   { value: 'system', label: 'System'},
 ];
 
+// ── Delete portfolio modal ─────────────────────────────────────────────
+function DeletePortfolioModal({
+  portfolio,
+  otherPortfolios,
+  onConfirm,
+  onCancel,
+}: {
+  portfolio: Portfolio;
+  otherPortfolios: Portfolio[];
+  onConfirm: (reassignToId?: string) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [reassignTo, setReassignTo] = useState<string>('');
+  const [mode, setMode] = useState<'reassign' | 'delete-trades'>(
+    otherPortfolios.length > 0 ? 'reassign' : 'delete-trades'
+  );
+  const [deleting, setDeleting] = useState(false);
+
+  const handleConfirm = async () => {
+    setDeleting(true);
+    try {
+      await onConfirm(mode === 'reassign' ? (reassignTo || undefined) : undefined);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={e => { if (e.target === e.currentTarget) onCancel(); }}
+    >
+      <div className="w-full max-w-md rounded-xl bg-white dark:bg-zinc-900 shadow-2xl p-6 space-y-4">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+          Delete &ldquo;{portfolio.name}&rdquo;
+        </h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          What should happen to the trades in this portfolio?
+        </p>
+
+        {otherPortfolios.length > 0 && (
+          <div className="space-y-3">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="radio"
+                name="deleteMode"
+                checked={mode === 'reassign'}
+                onChange={() => setMode('reassign')}
+                className="mt-0.5 h-4 w-4 text-[#0038a8] focus:ring-[#0038a8]"
+              />
+              <div className="flex-1">
+                <span className="text-sm font-medium text-gray-900 dark:text-white">Reassign trades to another portfolio</span>
+                {mode === 'reassign' && (
+                  <select
+                    value={reassignTo}
+                    onChange={e => setReassignTo(e.target.value)}
+                    className="mt-2 block w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-zinc-800 px-3 py-1.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#0038a8]"
+                  >
+                    <option value="">Select portfolio…</option>
+                    {otherPortfolios.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            </label>
+
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="radio"
+                name="deleteMode"
+                checked={mode === 'delete-trades'}
+                onChange={() => setMode('delete-trades')}
+                className="mt-0.5 h-4 w-4 text-[#0038a8] focus:ring-[#0038a8]"
+              />
+              <span className="text-sm font-medium text-gray-900 dark:text-white">Delete all trades in this portfolio</span>
+            </label>
+          </div>
+        )}
+
+        {otherPortfolios.length === 0 && (
+          <p className="text-sm text-amber-600 dark:text-amber-400">
+            All trades in this portfolio will be deleted as there are no other portfolios to reassign them to.
+          </p>
+        )}
+
+        <div className="flex gap-3 pt-2">
+          <Button
+            type="button"
+            onClick={handleConfirm}
+            isLoading={deleting}
+            disabled={mode === 'reassign' && !reassignTo}
+            className="bg-red-600 hover:bg-red-700 text-white border-red-600"
+          >
+            Delete portfolio
+          </Button>
+          <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main page ──────────────────────────────────────────────────────────
 export default function AccountPage() {
   const { token, userId, email, homeCurrency, isForeignResident, themePreference, isLoading, refreshProfile } = useAuth();
   const isInvestor = useIsInvestor();
   const { openUserProfile } = useClerk();
+  const { portfolios, loading: portfoliosLoading, createPortfolio, updatePortfolio, deletePortfolio } = usePortfolios();
 
   const [currencyInput, setCurrencyInput]   = useState('AUD');
   const [foreignInput, setForeignInput]     = useState(false);
@@ -32,6 +139,15 @@ export default function AccountPage() {
   const [saving, setSaving]                 = useState(false);
   const [saveError, setSaveError]           = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess]       = useState(false);
+
+  // Portfolio state
+  const [newPortfolioName, setNewPortfolioName]   = useState('');
+  const [creatingPortfolio, setCreatingPortfolio] = useState(false);
+  const [createError, setCreateError]             = useState<string | null>(null);
+  const [editingId, setEditingId]                 = useState<string | null>(null);
+  const [editName, setEditName]                   = useState('');
+  const [savingEdit, setSavingEdit]               = useState(false);
+  const [deletingPortfolio, setDeletingPortfolio] = useState<Portfolio | null>(null);
 
   useEffect(() => {
     if (homeCurrency !== null) setCurrencyInput(homeCurrency);
@@ -66,6 +182,47 @@ export default function AccountPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleCreatePortfolio = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = newPortfolioName.trim();
+    if (!name) return;
+    setCreatingPortfolio(true);
+    setCreateError(null);
+    try {
+      await createPortfolio(name);
+      setNewPortfolioName('');
+    } catch {
+      setCreateError('Failed to create portfolio.');
+    } finally {
+      setCreatingPortfolio(false);
+    }
+  };
+
+  const startEditing = (p: Portfolio) => {
+    setEditingId(p.id);
+    setEditName(p.name);
+  };
+
+  const handleSaveEdit = async (id: string) => {
+    const name = editName.trim();
+    if (!name) return;
+    setSavingEdit(true);
+    try {
+      await updatePortfolio(id, name);
+      setEditingId(null);
+    } catch {
+      // ignore — keep editing
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDeletePortfolio = async (reassignToId?: string) => {
+    if (!deletingPortfolio) return;
+    await deletePortfolio(deletingPortfolio.id, reassignToId);
+    setDeletingPortfolio(null);
   };
 
   if (isLoading) {
@@ -105,6 +262,92 @@ export default function AccountPage() {
             Manage identity (name, email, security) →
           </button>
         </div>
+      </div>
+
+      {/* ── Portfolios ────────────────────────────────────────────── */}
+      <div className="border border-gray-900 dark:border-gray-500 bg-white dark:bg-zinc-900 p-6">
+        <h2 className="mb-1 text-base font-semibold text-gray-900 dark:text-white">Portfolios</h2>
+        <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">
+          Group your trades into named portfolios. Filter by portfolio on the Portfolio and Trades pages.
+        </p>
+
+        {portfoliosLoading ? (
+          <Spinner />
+        ) : (
+          <div className="space-y-2">
+            {portfolios.length === 0 ? (
+              <p className="text-sm text-gray-400 dark:text-gray-500">No portfolios yet.</p>
+            ) : (
+              portfolios.map(p => (
+                <div key={p.id} className="flex items-center gap-2 rounded border border-gray-200 dark:border-gray-700 px-3 py-2">
+                  {editingId === p.id ? (
+                    <>
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={e => setEditName(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') handleSaveEdit(p.id); if (e.key === 'Escape') setEditingId(null); }}
+                        className="flex-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-zinc-800 px-2 py-1 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#0038a8]"
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSaveEdit(p.id)}
+                        disabled={savingEdit || !editName.trim()}
+                        className="text-xs font-medium text-[#0038a8] dark:text-blue-400 hover:underline disabled:opacity-50"
+                      >
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingId(null)}
+                        className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="flex-1 text-sm font-medium text-gray-900 dark:text-white">{p.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => startEditing(p)}
+                        className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                        title="Rename"
+                      >
+                        Rename
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeletingPortfolio(p)}
+                        className="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-400"
+                        title="Delete"
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
+                </div>
+              ))
+            )}
+
+            {/* Create new portfolio */}
+            <form onSubmit={handleCreatePortfolio} className="mt-3 flex gap-2">
+              <input
+                type="text"
+                value={newPortfolioName}
+                onChange={e => setNewPortfolioName(e.target.value)}
+                placeholder="New portfolio name…"
+                maxLength={100}
+                className="flex-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-zinc-800 px-3 py-1.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#0038a8]"
+              />
+              <Button type="submit" isLoading={creatingPortfolio} disabled={!newPortfolioName.trim()}>
+                Create
+              </Button>
+            </form>
+            {createError && <p className="text-xs text-red-600 dark:text-red-400">{createError}</p>}
+          </div>
+        )}
       </div>
 
       {/* ── Profile preferences ───────────────────────────────────── */}
@@ -218,6 +461,16 @@ export default function AccountPage() {
           </div>
         )}
       </div>
+
+      {/* ── Delete portfolio modal ─────────────────────────────────── */}
+      {deletingPortfolio && (
+        <DeletePortfolioModal
+          portfolio={deletingPortfolio}
+          otherPortfolios={portfolios.filter(p => p.id !== deletingPortfolio.id)}
+          onConfirm={handleDeletePortfolio}
+          onCancel={() => setDeletingPortfolio(null)}
+        />
+      )}
     </div>
   );
 }

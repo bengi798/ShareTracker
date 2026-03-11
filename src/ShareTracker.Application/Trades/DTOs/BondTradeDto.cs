@@ -18,8 +18,10 @@ public record BondTradeDto(
     string Currency,
     bool IsForeignTrade,
     bool ExchangeRateApplied,
-    decimal? ExchangeRate)
-    : TradeDto(Id, PricePerUnit, NumberOfUnits, NumberOfUnitsSold, TotalValue, TradeType, DateOfTrade, CreatedAt, Currency, IsForeignTrade, ExchangeRateApplied, ExchangeRate)
+    decimal? ExchangeRate,
+    decimal? TotalCostHome,
+    Guid? PortfolioId)
+    : TradeDto(Id, PricePerUnit, NumberOfUnits, NumberOfUnitsSold, TotalValue, TradeType, DateOfTrade, CreatedAt, Currency, IsForeignTrade, ExchangeRateApplied, ExchangeRate, TotalCostHome, PortfolioId)
 {
     public static BondTradeDto FromDomain(BondTrade trade) => new(
         trade.Id,
@@ -37,6 +39,8 @@ public record BondTradeDto(
         trade.Currency.ToString(),
         trade.IsForeignTrade,
         trade.ExchangeRateApplied,
-        trade.ExchangeRate
+        trade.ExchangeRate,
+        trade.TotalCostHome,
+        trade.PortfolioId
     );
 }

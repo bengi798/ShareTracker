@@ -13,8 +13,8 @@ public class PropertyTrade : Trade
         string userId, decimal pricePerUnit, decimal numberOfUnits,
         DateOnly dateOfTrade, TradeType tradeType,
         string address, PropertyType propertyType, Currency currency,
-        bool isForeignTrade, decimal? exchangeRate)
-        : base(userId, pricePerUnit, numberOfUnits, dateOfTrade, tradeType, currency, isForeignTrade, exchangeRate)
+        bool isForeignTrade, decimal? exchangeRate, decimal? totalCostHome = null)
+        : base(userId, pricePerUnit, numberOfUnits, dateOfTrade, tradeType, currency, isForeignTrade, exchangeRate, totalCostHome)
     {
         Address = address;
         PropertyType = propertyType;
@@ -28,12 +28,13 @@ public class PropertyTrade : Trade
         PropertyType propertyType,
         Currency currency,
         bool isForeignTrade = false,
-        decimal? exchangeRate = null)
+        decimal? exchangeRate = null,
+        decimal? totalCostHome = null)
     {
         if (string.IsNullOrWhiteSpace(address))
             throw new ArgumentException("Address must not be empty.");
 
-        UpdateBase(pricePerUnit, numberOfUnits, dateOfTrade, currency, isForeignTrade, exchangeRate);
+        UpdateBase(pricePerUnit, numberOfUnits, dateOfTrade, currency, isForeignTrade, exchangeRate, totalCostHome);
         Address = address;
         PropertyType = propertyType;
     }
@@ -48,13 +49,14 @@ public class PropertyTrade : Trade
         PropertyType propertyType,
         Currency currency,
         bool isForeignTrade = false,
-        decimal? exchangeRate = null)
+        decimal? exchangeRate = null,
+        decimal? totalCostHome = null)
     {
         if (string.IsNullOrWhiteSpace(address))
             throw new ArgumentException("Address must not be empty.");
 
         return new PropertyTrade(
             userId, pricePerUnit, numberOfUnits, dateOfTrade, tradeType,
-            address, propertyType, currency, isForeignTrade, exchangeRate);
+            address, propertyType, currency, isForeignTrade, exchangeRate, totalCostHome);
     }
 }

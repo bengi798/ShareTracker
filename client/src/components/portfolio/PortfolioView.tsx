@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { Trade, Quote, SharesQuote, CryptoQuote } from '@/lib/types';
+import type { Trade, Quote, SharesQuote, CryptoQuote, Portfolio } from '@/lib/types';
 import {
   computePositions,
   hasAnyPosition,
@@ -138,10 +138,15 @@ function SharesCategorySection({
       : fmtCurrency(amount, c);
   }
 
-  const subtotal = positions.reduce((s, p) => {
-    const c = normCurrency(p.currency);
-    return s + (displayMode === 'home' ? toAud(p.totalCost, c, rates) : p.totalCost);
-  }, 0);
+  function fmtCost(amount: number, currency: string) {
+    const c = normCurrency(currency);
+    return displayMode === 'home'
+      ? fmtCurrency(amount, homeCurrency)  // already in home currency (historical rate)
+      : fmtCurrency(amount, c);
+  }
+
+  const subtotal = positions.reduce((s, p) =>
+    s + (displayMode === 'home' ? p.totalCostHome : p.totalCost), 0);
 
   const subtotalCurrency = displayMode === 'home' ? homeCurrency : displayMode;
 
@@ -187,8 +192,8 @@ function SharesCategorySection({
                   <td className="w-[18%] px-3 py-3 font-medium text-gray-900 dark:text-white">{sharesDesc(p)}</td>
                   <td className="w-[5%]  px-3 py-3 text-right text-gray-500 dark:text-gray-400">{displayCurrency}</td>
                   <td className="w-[7%]  px-3 py-3 text-right text-gray-700 dark:text-gray-300">{fmtUnits(p.availableUnits)}</td>
-                  <td className="w-[14%] px-3 py-3 text-right text-gray-700 dark:text-gray-300 whitespace-nowrap">{fmtVal(p.avgCostPerUnit, p.currency)}</td>
-                  <td className="w-[14%] px-3 py-3 text-right font-medium text-gray-900 dark:text-white whitespace-nowrap">{fmtVal(p.totalCost, p.currency)}</td>
+                  <td className="w-[14%] px-3 py-3 text-right text-gray-700 dark:text-gray-300 whitespace-nowrap">{fmtCost(displayMode === 'home' ? p.avgCostHomePerUnit : p.avgCostPerUnit, p.currency)}</td>
+                  <td className="w-[14%] px-3 py-3 text-right font-medium text-gray-900 dark:text-white whitespace-nowrap">{fmtCost(displayMode === 'home' ? p.totalCostHome : p.totalCost, p.currency)}</td>
                   <td className="w-[14%] px-3 py-3 text-right text-gray-700 dark:text-gray-300 whitespace-nowrap">
                     {lastClose !== null ? fmtVal(lastClose, p.currency) : '—'}
                   </td>
@@ -247,10 +252,15 @@ function CryptoCategorySection({
       : fmtCurrency(amount, c);
   }
 
-  const subtotal = positions.reduce((s, p) => {
-    const c = normCurrency(p.currency);
-    return s + (displayMode === 'home' ? toAud(p.totalCost, c, rates) : p.totalCost);
-  }, 0);
+  function fmtCost(amount: number, currency: string) {
+    const c = normCurrency(currency);
+    return displayMode === 'home'
+      ? fmtCurrency(amount, homeCurrency)  // already in home currency (historical rate)
+      : fmtCurrency(amount, c);
+  }
+
+  const subtotal = positions.reduce((s, p) =>
+    s + (displayMode === 'home' ? p.totalCostHome : p.totalCost), 0);
 
   const subtotalCurrency = displayMode === 'home' ? homeCurrency : displayMode;
 
@@ -298,8 +308,8 @@ function CryptoCategorySection({
                   <td className="w-[18%] px-3 py-3 font-medium text-gray-900 dark:text-white">{cryptoDesc(p)}</td>
                   <td className="w-[5%]  px-3 py-3 text-right text-gray-500 dark:text-gray-400">{displayCurrency}</td>
                   <td className="w-[7%]  px-3 py-3 text-right text-gray-700 dark:text-gray-300">{fmtUnits(p.availableUnits)}</td>
-                  <td className="w-[14%] px-3 py-3 text-right text-gray-700 dark:text-gray-300 whitespace-nowrap">{fmtVal(p.avgCostPerUnit, p.currency)}</td>
-                  <td className="w-[14%] px-3 py-3 text-right font-medium text-gray-900 dark:text-white whitespace-nowrap">{fmtVal(p.totalCost, p.currency)}</td>
+                  <td className="w-[14%] px-3 py-3 text-right text-gray-700 dark:text-gray-300 whitespace-nowrap">{fmtCost(displayMode === 'home' ? p.avgCostHomePerUnit : p.avgCostPerUnit, p.currency)}</td>
+                  <td className="w-[14%] px-3 py-3 text-right font-medium text-gray-900 dark:text-white whitespace-nowrap">{fmtCost(displayMode === 'home' ? p.totalCostHome : p.totalCost, p.currency)}</td>
                   <td className="w-[14%] px-3 py-3 text-right text-gray-700 dark:text-gray-300 whitespace-nowrap">
                     {lastClose !== null ? fmtVal(lastClose, 'USD') : '—'}
                   </td>
@@ -339,14 +349,27 @@ export function PortfolioView({
   quotes,
   quotesLoading,
   homeCurrency,
+  portfolios = [],
+  selectedPortfolioId = null,
+  onPortfolioChange,
 }: {
-  trades:        Trade[];
-  quotes:        Quote[];
-  quotesLoading: boolean;
-  homeCurrency:  string;
+  trades:               Trade[];
+  quotes:               Quote[];
+  quotesLoading:        boolean;
+  homeCurrency:         string;
+  portfolios?:          Portfolio[];
+  selectedPortfolioId?: string | null;
+  onPortfolioChange?:   (id: string | null) => void;
 }) {
   const isInvestor = useIsInvestor();
-  const positions: AllPositions = useMemo(() => computePositions(trades), [trades]);
+
+  const filteredTrades = useMemo(() =>
+    selectedPortfolioId
+      ? trades.filter(t => t.portfolioId === selectedPortfolioId)
+      : trades,
+  [trades, selectedPortfolioId]);
+
+  const positions: AllPositions = useMemo(() => computePositions(filteredTrades), [filteredTrades]);
 
   const [priceMode, setPriceMode] = useState<'eod' | 'live'>('eod');
 
@@ -404,10 +427,10 @@ export function PortfolioView({
   const grandTotal = useMemo(() => {
     const all = [...visibleShares, ...visibleGold, ...visibleCrypto, ...visibleBonds, ...visibleProperty];
     return all.reduce((s, p) => {
-      const cost = displayMode === 'home' ? toAud(p.totalCost, p.currency, rates) : p.totalCost;
+      const cost = displayMode === 'home' ? p.totalCostHome : p.totalCost;
       return s + cost;
     }, 0);
-  }, [visibleShares, visibleGold, visibleCrypto, visibleBonds, visibleProperty, displayMode, rates]);
+  }, [visibleShares, visibleGold, visibleCrypto, visibleBonds, visibleProperty, displayMode]);
 
   const totalMarketValue = useMemo(() => {
     const sharesValue = visibleShares.reduce((sum, p) => {
@@ -433,53 +456,80 @@ export function PortfolioView({
 
   const totalPnl = totalMarketValue - grandTotal;
 
-  const makeRows = <T extends { availableUnits: number; avgCostPerUnit: number; totalCost: number; currency: string }>(
+  const makeRows = <T extends { availableUnits: number; avgCostPerUnit: number; totalCost: number; currency: string; avgCostHomePerUnit: number; totalCostHome: number }>(
     arr: T[],
     descFn: (p: T) => string,
   ): CategoryRow[] =>
     arr.map(p => {
       const c           = normCurrency(p.currency);
       const displayCurr = displayMode === 'home' ? homeCurrency : c;
-      const convert     = (v: number) => displayMode === 'home' ? toAud(v, c, rates) : v;
       return {
         description: descFn(p),
         units:       p.availableUnits,
-        avgCost:     convert(p.avgCostPerUnit),
-        totalCost:   convert(p.totalCost),
+        avgCost:     displayMode === 'home' ? p.avgCostHomePerUnit : p.avgCostPerUnit,
+        totalCost:   displayMode === 'home' ? p.totalCostHome      : p.totalCost,
         currency:    displayCurr,
       };
     });
 
-  const goldRows     = useMemo(() => makeRows(visibleGold,     goldDesc),     [visibleGold,     displayMode, rates]); // eslint-disable-line react-hooks/exhaustive-deps
-  const bondRows     = useMemo(() => makeRows(visibleBonds,    bondDesc),     [visibleBonds,    displayMode, rates]); // eslint-disable-line react-hooks/exhaustive-deps
-  const propertyRows = useMemo(() => makeRows(visibleProperty, propertyDesc), [visibleProperty, displayMode, rates]); // eslint-disable-line react-hooks/exhaustive-deps
+  const goldRows     = useMemo(() => makeRows(visibleGold,     goldDesc),     [visibleGold,     displayMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  const bondRows     = useMemo(() => makeRows(visibleBonds,    bondDesc),     [visibleBonds,    displayMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  const propertyRows = useMemo(() => makeRows(visibleProperty, propertyDesc), [visibleProperty, displayMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const hasPositions = useMemo(() => hasAnyPosition(positions), [positions]);
 
-  const eodDateLabel = useMemo(() => {
-    const asOf = quotes.find(q => q.asOf)?.asOf;
-    if (!asOf) return 'EOD';
-    const d = new Date(asOf + 'T00:00:00');
-    return `EOD (${d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })})`;
-  }, [quotes]);
-
-  if (!hasPositions) {
-    return (
-      <div className="border border-dashed border-gray-400 dark:border-gray-600 py-16 text-center">
-        <p className="text-base font-medium text-gray-500 dark:text-gray-400">No open positions</p>
-        <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">
-          Add a buy trade to see your portfolio here.
-        </p>
-      </div>
-    );
-  }
+  const eodDateLabel = 'Previous Close';
 
   const toggleBtnBase = 'px-3 py-1 text-sm font-medium transition-colors';
   const toggleActive  = `${toggleBtnBase} bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900`;
   const toggleInactive = `${toggleBtnBase} border border-gray-400 dark:border-gray-500 text-gray-600 dark:text-gray-300 hover:border-gray-900 dark:hover:border-gray-100 hover:text-black dark:hover:text-white`;
 
+  const portfolioFilter = portfolios.length > 0 && onPortfolioChange && (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Portfolio:</span>
+      <button
+        onClick={() => onPortfolioChange(null)}
+        className={selectedPortfolioId === null ? toggleActive : toggleInactive}
+      >
+        All Portfolios
+      </button>
+      {portfolios.map(p => (
+        <button
+          key={p.id}
+          onClick={() => onPortfolioChange(p.id)}
+          className={selectedPortfolioId === p.id ? toggleActive : toggleInactive}
+        >
+          {p.name}
+        </button>
+      ))}
+      <span
+        className="text-xs text-gray-400 dark:text-gray-500 cursor-help"
+        title="Manage portfolios from your Account page"
+      >
+        ⓘ
+      </span>
+    </div>
+  );
+
+  if (!hasPositions) {
+    return (
+      <div className="space-y-4">
+        {portfolioFilter}
+        <div className="border border-dashed border-gray-400 dark:border-gray-600 py-16 text-center">
+          <p className="text-base font-medium text-gray-500 dark:text-gray-400">No open positions</p>
+          <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">
+            Add a buy trade to see your portfolio here.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
+
+      {/* ── Portfolio filter ───────────────────────────────────────── */}
+      {portfolioFilter}
 
       {/* ── Price mode toggle ──────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-2">
@@ -520,6 +570,14 @@ export function PortfolioView({
           <span className="text-xs text-gray-400 dark:text-gray-500 italic">fetching rates…</span>
         )}
       </div>
+
+      {/* ── Forex disclaimer ───────────────────────────────────────── */}
+      {displayMode === 'home' && foreignCurrencies.length > 0 && (
+        <p className="text-xs text-gray-400 dark:text-gray-500">
+          Share Values shown in {homeCurrency} have been converted using live exchange rates for indicative purposes only.
+          They do not reflect the actual proceeds you would receive when selling foreign-currency assets and converting back to {homeCurrency}.
+        </p>
+      )}
 
       {/* ── Summary card ───────────────────────────────────────────── */}
       <div className="flex gap-10 border border-gray-900 dark:border-gray-500 bg-white dark:bg-zinc-900 p-5">

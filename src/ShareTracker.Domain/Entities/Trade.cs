@@ -15,9 +15,11 @@ public abstract class Trade
     public Currency Currency { get; private set; }
     public DateOnly DateOfTrade { get; private set; }
     public DateTime CreatedAt { get; private set; }
+    public Guid? PortfolioId { get; private set; }
     public bool IsForeignTrade { get; private set; }
     public bool ExchangeRateApplied { get; private set; }
     public decimal? ExchangeRate { get; private set; }
+    public decimal? TotalCostHome { get; private set; }
 
     // Required by EF Core
     protected Trade() { }
@@ -30,7 +32,8 @@ public abstract class Trade
         TradeType tradeType,
         Currency currency,
         bool isForeignTrade = false,
-        decimal? exchangeRate = null)
+        decimal? exchangeRate = null,
+        decimal? totalCostHome = null)
     {
         // Use value objects for validation + rounding
         var price = Money.Create(pricePerUnit);
@@ -52,6 +55,7 @@ public abstract class Trade
         IsForeignTrade = isForeignTrade;
         ExchangeRate = isForeignTrade ? exchangeRate : null;
         ExchangeRateApplied = isForeignTrade && exchangeRate.HasValue;
+        TotalCostHome = isForeignTrade ? totalCostHome : null;
     }
 
     protected void UpdateBase(
@@ -60,7 +64,8 @@ public abstract class Trade
         DateOnly dateOfTrade,
         Currency currency,
         bool isForeignTrade,
-        decimal? exchangeRate)
+        decimal? exchangeRate,
+        decimal? totalCostHome = null)
     {
         var price = Money.Create(pricePerUnit);
         var units = Quantity.Create(numberOfUnits);
@@ -76,12 +81,15 @@ public abstract class Trade
         IsForeignTrade = isForeignTrade;
         ExchangeRate = isForeignTrade ? exchangeRate : null;
         ExchangeRateApplied = isForeignTrade && exchangeRate.HasValue;
+        TotalCostHome = isForeignTrade ? totalCostHome : null;
     }
 
     /// <summary>
     /// Allocates <paramref name="units"/> sold against this buy trade (FIFO bookkeeping).
     /// Only valid on Buy trades. Throws if allocation would exceed NumberOfUnits.
     /// </summary>
+    public void SetPortfolio(Guid? portfolioId) => PortfolioId = portfolioId;
+
     public void AllocateSoldUnits(decimal units)
     {
         if (TradeType != TradeType.Buy)

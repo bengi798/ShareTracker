@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { Trade, AssetType } from '@/lib/types';
+import type { Trade, AssetType, Portfolio } from '@/lib/types';
 import { ASSET_TYPES } from '@/lib/types';
 import { TradeRow } from './TradeRow';
 import { EditTradeModal } from './EditTradeModal';
@@ -12,11 +12,12 @@ const TABS: Tab[] = ['All', ...ASSET_TYPES];
 
 interface TradeTableProps {
   trades: Trade[];
+  portfolios?: Portfolio[];
   onDelete: (id: string) => Promise<void>;
   onUpdate: (updated: Trade) => void;
 }
 
-export function TradeTable({ trades, onDelete, onUpdate }: TradeTableProps) {
+export function TradeTable({ trades, portfolios = [], onDelete, onUpdate }: TradeTableProps) {
   const [activeTab, setActiveTab] = useState<Tab>('All');
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null);
 
@@ -100,6 +101,7 @@ export function TradeTable({ trades, onDelete, onUpdate }: TradeTableProps) {
       {editingTrade && (
         <EditTradeModal
           trade={editingTrade}
+          portfolios={portfolios}
           onClose={() => setEditingTrade(null)}
           onSaved={handleSaved}
         />

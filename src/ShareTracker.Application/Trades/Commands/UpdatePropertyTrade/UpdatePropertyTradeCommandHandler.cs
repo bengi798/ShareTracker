@@ -49,8 +49,10 @@ public class UpdatePropertyTradeCommandHandler : IRequestHandler<UpdatePropertyT
             propertyType:   propertyType,
             currency:       currency,
             isForeignTrade: request.IsForeignTrade,
-            exchangeRate:   request.ExchangeRate);
+            exchangeRate:   request.ExchangeRate,
+            totalCostHome:  request.TotalCostHome);
 
+        propertyTrade.SetPortfolio(request.PortfolioId);
         await _uow.SaveChangesAsync(cancellationToken);
 
         return TradeDto.FromDomain(propertyTrade);

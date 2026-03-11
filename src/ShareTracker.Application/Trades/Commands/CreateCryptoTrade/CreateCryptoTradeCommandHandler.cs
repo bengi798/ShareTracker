@@ -66,9 +66,11 @@ public class CreateCryptoTradeCommandHandler : IRequestHandler<CreateCryptoTrade
             currency:       currency,
             isForeignTrade: request.IsForeignTrade,
             exchangeRate:   request.ExchangeRate,
-            brokerageFees:  request.BrokerageFees
+            brokerageFees:  request.BrokerageFees,
+            totalCostHome:  request.TotalCostHome
         );
 
+        trade.SetPortfolio(request.PortfolioId);
         await _trades.AddAsync(trade, cancellationToken);
         await _uow.SaveChangesAsync(cancellationToken);
 

@@ -13,4 +13,6 @@ public record UpdateSharesTradeCommand(
     string Currency,
     bool IsForeignTrade = false,
     decimal? ExchangeRate = null,
-    decimal? BrokerageFees = null) : IRequest<TradeDto>;
+    decimal? BrokerageFees = null,
+    decimal? TotalCostHome = null,
+    Guid? PortfolioId = null) : IRequest<TradeDto>;

@@ -7,6 +7,7 @@ public class ShareTrackerDbContext : DbContext
 {
     public DbSet<Trade>       Trades       => Set<Trade>();
     public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
+    public DbSet<Portfolio>   Portfolios   => Set<Portfolio>();
 
     public ShareTrackerDbContext(DbContextOptions<ShareTrackerDbContext> options)
         : base(options) { }

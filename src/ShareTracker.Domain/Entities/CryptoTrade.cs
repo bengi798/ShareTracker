@@ -14,8 +14,9 @@ public class CryptoTrade : Trade
         string userId, decimal pricePerUnit, decimal numberOfUnits,
         DateOnly dateOfTrade, TradeType tradeType,
         string coinSymbol, string? network, Currency currency,
-        bool isForeignTrade, decimal? exchangeRate, decimal? brokerageFees)
-        : base(userId, pricePerUnit, numberOfUnits, dateOfTrade, tradeType, currency, isForeignTrade, exchangeRate)
+        bool isForeignTrade, decimal? exchangeRate, decimal? brokerageFees,
+        decimal? totalCostHome = null)
+        : base(userId, pricePerUnit, numberOfUnits, dateOfTrade, tradeType, currency, isForeignTrade, exchangeRate, totalCostHome)
     {
         CoinSymbol = coinSymbol;
         Network = network;
@@ -31,14 +32,15 @@ public class CryptoTrade : Trade
         Currency currency,
         bool isForeignTrade = false,
         decimal? exchangeRate = null,
-        decimal? brokerageFees = null)
+        decimal? brokerageFees = null,
+        decimal? totalCostHome = null)
     {
         if (string.IsNullOrWhiteSpace(coinSymbol))
             throw new ArgumentException("Coin symbol must not be empty.");
         if (brokerageFees.HasValue && brokerageFees.Value < 0)
             throw new ArgumentException("Brokerage fees cannot be negative.");
 
-        UpdateBase(pricePerUnit, numberOfUnits, dateOfTrade, currency, isForeignTrade, exchangeRate);
+        UpdateBase(pricePerUnit, numberOfUnits, dateOfTrade, currency, isForeignTrade, exchangeRate, totalCostHome);
         CoinSymbol = coinSymbol.ToUpperInvariant();
         Network = network;
         BrokerageFees = brokerageFees;
@@ -55,7 +57,8 @@ public class CryptoTrade : Trade
         Currency currency = Currency.USD,
         bool isForeignTrade = false,
         decimal? exchangeRate = null,
-        decimal? brokerageFees = null)
+        decimal? brokerageFees = null,
+        decimal? totalCostHome = null)
     {
         if (string.IsNullOrWhiteSpace(coinSymbol))
             throw new ArgumentException("Coin symbol must not be empty.");
@@ -64,6 +67,6 @@ public class CryptoTrade : Trade
 
         return new CryptoTrade(
             userId, pricePerUnit, numberOfUnits, dateOfTrade, tradeType,
-            coinSymbol.ToUpperInvariant(), network, currency, isForeignTrade, exchangeRate, brokerageFees);
+            coinSymbol.ToUpperInvariant(), network, currency, isForeignTrade, exchangeRate, brokerageFees, totalCostHome);
     }
 }

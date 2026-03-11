@@ -2,10 +2,12 @@ import type { Trade, Exchange, WeightUnit, PropertyType } from './types';
 
 // ── Base ──────────────────────────────────────────────────────────────
 export interface PositionBase {
-  availableUnits: number;
-  avgCostPerUnit: number;  // weighted average buy price
-  totalCost:      number;  // avgCostPerUnit * availableUnits
-  currency:       string;  // USD, EUR, etc. (for display only, not used in calculations)
+  availableUnits:     number;
+  avgCostPerUnit:     number;  // weighted average buy price (native currency)
+  totalCost:          number;  // avgCostPerUnit * availableUnits (native currency)
+  currency:           string;  // USD, EUR, etc. (for display only, not used in calculations)
+  avgCostHomePerUnit: number;  // weighted average buy price in home currency (historical rate)
+  totalCostHome:      number;  // total cost basis in home currency (historical rate)
 }
 
 // ── Per-asset position types ──────────────────────────────────────────
@@ -62,10 +64,11 @@ export interface AllPositions {
 
 // ── Internal accumulator (tracks buy totals separately) ───────────────
 interface Accumulator {
-  netUnits:    number;
-  sumBuyUnits: number;
-  sumBuyValue: number;
-  currency:    string;
+  netUnits:        number;
+  sumBuyUnits:     number;
+  sumBuyValue:     number;  // native currency
+  sumBuyValueHome: number;  // home currency using historical exchange rates
+  currency:        string;
 }
 
 // ── computePositions ──────────────────────────────────────────────────
@@ -85,65 +88,74 @@ export function computePositions(trades: Trade[]): AllPositions {
     const isBuy  = trade.tradeType === 'Buy';
     const units  = trade.numberOfUnits;
     const value  = trade.pricePerUnit * units;
+    // Home-currency cost: prefer stored totalCostHome, fall back to value/exchangeRate for
+    // foreign trades recorded before TotalCostHome was added, then plain value for domestic.
+    const valueHome = trade.totalCostHome
+      ?? (trade.isForeignTrade && trade.exchangeRate ? value / trade.exchangeRate : value);
 
     switch (trade.assetType) {
       case 'Shares': {
-        const key  = `${trade.ticker.toUpperCase()}|${trade.exchange}`;
-        const prev = sharesAcc.get(key) ?? { ticker: trade.ticker, exchange: trade.exchange, currency: trade.currency, netUnits: 0, sumBuyUnits: 0, sumBuyValue: 0 };
+        const key       = `${trade.ticker.toUpperCase()}|${trade.exchange}`;
+        const prev      = sharesAcc.get(key) ?? { ticker: trade.ticker, exchange: trade.exchange, currency: trade.currency, netUnits: 0, sumBuyUnits: 0, sumBuyValue: 0, sumBuyValueHome: 0 };
         sharesAcc.set(key, {
           ...prev,
-          netUnits:    prev.netUnits    + (isBuy ? units : -units),
-          sumBuyUnits: prev.sumBuyUnits + (isBuy ? units : 0),
-          sumBuyValue: prev.sumBuyValue + (isBuy ? value : 0),
-          currency:    trade.currency,
+          netUnits:        prev.netUnits        + (isBuy ? units : -units),
+          sumBuyUnits:     prev.sumBuyUnits     + (isBuy ? units : 0),
+          sumBuyValue:     prev.sumBuyValue     + (isBuy ? value : 0),
+          sumBuyValueHome: prev.sumBuyValueHome + (isBuy ? valueHome : 0),
+          currency:        trade.currency,
         });
         break;
       }
       case 'Gold': {
-        const key  = `${trade.purityCarats}|${trade.weightUnit}`;
-        const prev = goldAcc.get(key) ?? { purityCarats: trade.purityCarats, weightUnit: trade.weightUnit, currency: trade.currency, netUnits: 0, sumBuyUnits: 0, sumBuyValue: 0 };
+        const key       = `${trade.purityCarats}|${trade.weightUnit}`;
+        const prev      = goldAcc.get(key) ?? { purityCarats: trade.purityCarats, weightUnit: trade.weightUnit, currency: trade.currency, netUnits: 0, sumBuyUnits: 0, sumBuyValue: 0, sumBuyValueHome: 0 };
         goldAcc.set(key, {
           ...prev,
-          netUnits:    prev.netUnits    + (isBuy ? units : -units),
-          sumBuyUnits: prev.sumBuyUnits + (isBuy ? units : 0),
-          sumBuyValue: prev.sumBuyValue + (isBuy ? value : 0),
-          currency:    trade.currency,
+          netUnits:        prev.netUnits        + (isBuy ? units : -units),
+          sumBuyUnits:     prev.sumBuyUnits     + (isBuy ? units : 0),
+          sumBuyValue:     prev.sumBuyValue     + (isBuy ? value : 0),
+          sumBuyValueHome: prev.sumBuyValueHome + (isBuy ? valueHome : 0),
+          currency:        trade.currency,
         });
         break;
       }
       case 'Crypto': {
-        const key  = trade.coinSymbol.toUpperCase();
-        const prev = cryptoAcc.get(key) ?? { coinSymbol: trade.coinSymbol, currency: trade.currency, netUnits: 0, sumBuyUnits: 0, sumBuyValue: 0 };
+        const key       = trade.coinSymbol.toUpperCase();
+        const prev      = cryptoAcc.get(key) ?? { coinSymbol: trade.coinSymbol, currency: trade.currency, netUnits: 0, sumBuyUnits: 0, sumBuyValue: 0, sumBuyValueHome: 0 };
         cryptoAcc.set(key, {
           ...prev,
-          netUnits:    prev.netUnits    + (isBuy ? units : -units),
-          sumBuyUnits: prev.sumBuyUnits + (isBuy ? units : 0),
-          sumBuyValue: prev.sumBuyValue + (isBuy ? value : 0),
-          currency:    trade.currency,
+          netUnits:        prev.netUnits        + (isBuy ? units : -units),
+          sumBuyUnits:     prev.sumBuyUnits     + (isBuy ? units : 0),
+          sumBuyValue:     prev.sumBuyValue     + (isBuy ? value : 0),
+          sumBuyValueHome: prev.sumBuyValueHome + (isBuy ? valueHome : 0),
+          currency:        trade.currency,
         });
         break;
       }
       case 'Bond': {
-        const key  = trade.bondCode.toUpperCase();
-        const prev = bondsAcc.get(key) ?? { bondCode: trade.bondCode, yieldPercent: trade.yieldPercent, maturityDate: trade.maturityDate, issuer: trade.issuer, currency: trade.currency, netUnits: 0, sumBuyUnits: 0, sumBuyValue: 0 };
+        const key       = trade.bondCode.toUpperCase();
+        const prev      = bondsAcc.get(key) ?? { bondCode: trade.bondCode, yieldPercent: trade.yieldPercent, maturityDate: trade.maturityDate, issuer: trade.issuer, currency: trade.currency, netUnits: 0, sumBuyUnits: 0, sumBuyValue: 0, sumBuyValueHome: 0 };
         bondsAcc.set(key, {
           ...prev,
-          netUnits:    prev.netUnits    + (isBuy ? units : -units),
-          sumBuyUnits: prev.sumBuyUnits + (isBuy ? units : 0),
-          sumBuyValue: prev.sumBuyValue + (isBuy ? value : 0),
-          currency:    trade.currency,
+          netUnits:        prev.netUnits        + (isBuy ? units : -units),
+          sumBuyUnits:     prev.sumBuyUnits     + (isBuy ? units : 0),
+          sumBuyValue:     prev.sumBuyValue     + (isBuy ? value : 0),
+          sumBuyValueHome: prev.sumBuyValueHome + (isBuy ? valueHome : 0),
+          currency:        trade.currency,
         });
         break;
       }
       case 'Property': {
-        const key  = trade.address.toLowerCase();
-        const prev = propertyAcc.get(key) ?? { address: trade.address, propertyType: trade.propertyType, currency: trade.currency, netUnits: 0, sumBuyUnits: 0, sumBuyValue: 0 };
+        const key       = trade.address.toLowerCase();
+        const prev      = propertyAcc.get(key) ?? { address: trade.address, propertyType: trade.propertyType, currency: trade.currency, netUnits: 0, sumBuyUnits: 0, sumBuyValue: 0, sumBuyValueHome: 0 };
         propertyAcc.set(key, {
           ...prev,
-          netUnits:    prev.netUnits    + (isBuy ? units : -units),
-          sumBuyUnits: prev.sumBuyUnits + (isBuy ? units : 0),
-          sumBuyValue: prev.sumBuyValue + (isBuy ? value : 0),
-          currency:    trade.currency,
+          netUnits:        prev.netUnits        + (isBuy ? units : -units),
+          sumBuyUnits:     prev.sumBuyUnits     + (isBuy ? units : 0),
+          sumBuyValue:     prev.sumBuyValue     + (isBuy ? value : 0),
+          sumBuyValueHome: prev.sumBuyValueHome + (isBuy ? valueHome : 0),
+          currency:        trade.currency,
         });
         break;
       }
@@ -151,12 +163,15 @@ export function computePositions(trades: Trade[]): AllPositions {
   }
 
   function toBase(acc: Accumulator): PositionBase {
-    const avgCostPerUnit = acc.sumBuyUnits > 0 ? acc.sumBuyValue / acc.sumBuyUnits : 0;
+    const avgCostPerUnit     = acc.sumBuyUnits > 0 ? acc.sumBuyValue     / acc.sumBuyUnits : 0;
+    const avgCostHomePerUnit = acc.sumBuyUnits > 0 ? acc.sumBuyValueHome / acc.sumBuyUnits : 0;
     return {
-      availableUnits: acc.netUnits,
+      availableUnits:     acc.netUnits,
       avgCostPerUnit,
-      totalCost: avgCostPerUnit * acc.netUnits,
-      currency: acc.currency,
+      totalCost:          avgCostPerUnit     * acc.netUnits,
+      currency:           acc.currency,
+      avgCostHomePerUnit,
+      totalCostHome:      avgCostHomePerUnit * acc.netUnits,
     };
   }
 

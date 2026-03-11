@@ -15,8 +15,8 @@ public class BondTrade : Trade
         string userId, decimal pricePerUnit, decimal numberOfUnits,
         DateOnly dateOfTrade, TradeType tradeType,
         string bondCode, decimal yieldPercent, DateOnly maturityDate, string issuer, Currency currency,
-        bool isForeignTrade, decimal? exchangeRate)
-        : base(userId, pricePerUnit, numberOfUnits, dateOfTrade, tradeType, currency, isForeignTrade, exchangeRate)
+        bool isForeignTrade, decimal? exchangeRate, decimal? totalCostHome = null)
+        : base(userId, pricePerUnit, numberOfUnits, dateOfTrade, tradeType, currency, isForeignTrade, exchangeRate, totalCostHome)
     {
         BondCode = bondCode;
         YieldPercent = yieldPercent;
@@ -34,7 +34,8 @@ public class BondTrade : Trade
         string issuer,
         Currency currency,
         bool isForeignTrade = false,
-        decimal? exchangeRate = null)
+        decimal? exchangeRate = null,
+        decimal? totalCostHome = null)
     {
         if (string.IsNullOrWhiteSpace(bondCode))
             throw new ArgumentException("Bond code must not be empty.");
@@ -43,7 +44,7 @@ public class BondTrade : Trade
         if (string.IsNullOrWhiteSpace(issuer))
             throw new ArgumentException("Issuer must not be empty.");
 
-        UpdateBase(pricePerUnit, numberOfUnits, dateOfTrade, currency, isForeignTrade, exchangeRate);
+        UpdateBase(pricePerUnit, numberOfUnits, dateOfTrade, currency, isForeignTrade, exchangeRate, totalCostHome);
         BondCode = bondCode.ToUpperInvariant();
         YieldPercent = yieldPercent;
         MaturityDate = maturityDate;
@@ -62,7 +63,8 @@ public class BondTrade : Trade
         string issuer,
         Currency currency,
         bool isForeignTrade = false,
-        decimal? exchangeRate = null)
+        decimal? exchangeRate = null,
+        decimal? totalCostHome = null)
     {
         if (string.IsNullOrWhiteSpace(bondCode))
             throw new ArgumentException("Bond code must not be empty.");
@@ -74,6 +76,6 @@ public class BondTrade : Trade
         return new BondTrade(
             userId, pricePerUnit, numberOfUnits, dateOfTrade, tradeType,
             bondCode.ToUpperInvariant(), yieldPercent, maturityDate, issuer, currency,
-            isForeignTrade, exchangeRate);
+            isForeignTrade, exchangeRate, totalCostHome);
     }
 }

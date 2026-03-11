@@ -67,9 +67,11 @@ public class CreateBondTradeCommandHandler : IRequestHandler<CreateBondTradeComm
             issuer:         request.Issuer,
             currency:       currency,
             isForeignTrade: request.IsForeignTrade,
-            exchangeRate:   request.ExchangeRate
+            exchangeRate:   request.ExchangeRate,
+            totalCostHome:  request.TotalCostHome
         );
 
+        trade.SetPortfolio(request.PortfolioId);
         await _trades.AddAsync(trade, cancellationToken);
         await _uow.SaveChangesAsync(cancellationToken);
 

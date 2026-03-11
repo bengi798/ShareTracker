@@ -50,8 +50,10 @@ public class UpdateSharesTradeCommandHandler : IRequestHandler<UpdateSharesTrade
             currency:       currency,
             isForeignTrade: request.IsForeignTrade,
             exchangeRate:   request.ExchangeRate,
-            brokerageFees:  request.BrokerageFees);
+            brokerageFees:  request.BrokerageFees,
+            totalCostHome:  request.TotalCostHome);
 
+        sharesTrade.SetPortfolio(request.PortfolioId);
         await _uow.SaveChangesAsync(cancellationToken);
 
         return TradeDto.FromDomain(sharesTrade);

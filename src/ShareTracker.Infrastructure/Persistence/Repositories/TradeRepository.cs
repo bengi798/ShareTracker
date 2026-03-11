@@ -27,4 +27,9 @@ public class TradeRepository : ITradeRepository
 
     public void Remove(Trade trade) =>
         _context.Trades.Remove(trade);
+
+    public async Task<IReadOnlyList<Trade>> GetByPortfolioIdAsync(Guid portfolioId, CancellationToken ct = default) =>
+        await _context.Trades
+            .Where(t => t.PortfolioId == portfolioId)
+            .ToListAsync(ct);
 }

@@ -70,6 +70,7 @@ builder.Services.AddAuthorization();
 
 // ── Infrastructure: Services & Repositories ──────────────────────────────────
 builder.Services.AddScoped<ITradeRepository, TradeRepository>();
+builder.Services.AddScoped<IPortfolioRepository, PortfolioRepository>();
 builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddHttpContextAccessor();

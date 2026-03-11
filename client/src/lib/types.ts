@@ -13,6 +13,16 @@ export const PROPERTY_TYPES: PropertyType[] = ['Residential', 'Commercial', 'Lan
 export const CURRENCIES: string[]              = ['AUD', 'USD', 'EUR', 'GBP', 'JPY', 'Other'];
 export const VALID_PURITY_CARATS            = [9, 14, 18, 22, 24] as const;
 
+// ── Portfolio ─────────────────────────────────────────────────────────
+export interface Portfolio {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
+export interface CreatePortfolioPayload { name: string; }
+export interface UpdatePortfolioPayload { name: string; }
+
 // ── Polymorphic Trade (matches backend [JsonPolymorphic]) ─────────────
 interface TradeBase {
   id: string;
@@ -27,6 +37,8 @@ interface TradeBase {
   isForeignTrade: boolean;
   exchangeRateApplied: boolean;
   exchangeRate: number | null;
+  totalCostHome: number | null;
+  portfolioId: string | null;
 }
 
 export interface SharesTrade extends TradeBase {
@@ -74,6 +86,8 @@ interface CreateBase {
   currency: string;
   isForeignTrade: boolean;
   exchangeRate: number | null;
+  totalCostHome?: number | null;
+  portfolioId?: string | null;
 }
 
 export interface CreateSharesPayload extends CreateBase {
@@ -113,6 +127,8 @@ interface UpdateBase {
   currency: string;
   isForeignTrade: boolean;
   exchangeRate: number | null;
+  totalCostHome?: number | null;
+  portfolioId?: string | null;
 }
 
 export interface UpdateSharesPayload extends UpdateBase {

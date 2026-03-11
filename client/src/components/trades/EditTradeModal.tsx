@@ -1,13 +1,13 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import type { Control, UseFormRegister, UseFormSetValue, FieldErrors } from 'react-hook-form';
 import { tradesApi } from '@/lib/api/trades';
 import { ApiError } from '@/lib/api/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import type {
-  Trade, Exchange, WeightUnit, PropertyType, ApiValidationError,
+  Trade, Exchange, WeightUnit, PropertyType, ApiValidationError, Portfolio,
 } from '@/lib/types';
 import {
   EXCHANGES, WEIGHT_UNITS, PROPERTY_TYPES, VALID_PURITY_CARATS, CURRENCIES,
@@ -27,7 +27,7 @@ type EditFormValues = {
   dateOfTrade: string;
   currency: string;
   isForeignTrade: boolean;
-  exchangeRate: string;
+  totalCostHome: string;
   // Shares
   ticker?: string;
   exchange?: Exchange;
@@ -45,6 +45,8 @@ type EditFormValues = {
   // Property
   address?: string;
   propertyType?: PropertyType;
+  // Portfolio
+  portfolioId?: string;
   // Brokerage (Shares + Crypto only)
   brokerageFeeMode?: BrokerageFeeMode;
   brokerageFeeDollar?: string;
@@ -59,7 +61,8 @@ function buildDefaultValues(trade: Trade): EditFormValues {
     dateOfTrade:    trade.dateOfTrade,
     currency:       trade.isForeignTrade ? trade.currency : '',
     isForeignTrade: trade.isForeignTrade,
-    exchangeRate:   trade.exchangeRate != null ? String(trade.exchangeRate) : '',
+    totalCostHome:  '',
+    portfolioId:    trade.portfolioId ?? '',
     brokerageFeeMode: 'dollar',
   };
 
@@ -123,18 +126,18 @@ function BrokerageFeeSection({
         <Label className="mb-0">
           Brokerage fee <span className="font-normal text-gray-400">(optional)</span>
         </Label>
-        <div className="flex rounded border border-gray-300 overflow-hidden text-xs font-medium">
+        <div className="flex rounded border border-gray-300 dark:border-gray-600 overflow-hidden text-xs font-medium">
           <button
             type="button"
             onClick={() => { setValue('brokerageFeeMode', 'dollar'); setValue('brokerageFeePercent', ''); }}
-            className={`px-3 py-1 transition-colors ${mode === 'dollar' ? 'bg-gray-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+            className={`px-3 py-1 transition-colors ${mode === 'dollar' ? 'bg-gray-700 text-white' : 'bg-white dark:bg-zinc-900 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-800'}`}
           >
             $ Dollar
           </button>
           <button
             type="button"
             onClick={() => { setValue('brokerageFeeMode', 'percent'); setValue('brokerageFeeDollar', ''); }}
-            className={`px-3 py-1 border-l border-gray-300 transition-colors ${mode === 'percent' ? 'bg-gray-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+            className={`px-3 py-1 border-l border-gray-300 dark:border-gray-600 transition-colors ${mode === 'percent' ? 'bg-gray-700 text-white' : 'bg-white dark:bg-zinc-900 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-800'}`}
           >
             % Percent
           </button>
@@ -161,7 +164,7 @@ function BrokerageFeeSection({
           />
           {errors.brokerageFeePercent && <FormError message={errors.brokerageFeePercent.message!} />}
           {calculatedDollar !== null && (
-            <p className="mt-1 text-xs text-gray-500">≈ ${calculatedDollar.toFixed(2)} brokerage</p>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">≈ ${calculatedDollar.toFixed(2)} brokerage</p>
           )}
         </div>
       )}
@@ -169,36 +172,46 @@ function BrokerageFeeSection({
   );
 }
 
+// ── Exchange → currency mapping ────────────────────────────────────────
+const EXCHANGE_CURRENCY_MAP: Partial<Record<Exchange, string>> = {
+  NYSE:   'USD',
+  NASDAQ: 'USD',
+  ASX:    'AUD',
+  LSE:    'GBP',
+  TSX:    'CAD',
+};
+
 // ── Style constants ────────────────────────────────────────────────────
 const ASSET_BADGE: Record<Trade['assetType'], string> = {
-  Shares:   'bg-blue-100   text-blue-700',
-  Gold:     'bg-amber-100  text-amber-700',
-  Crypto:   'bg-purple-100 text-purple-700',
-  Bond:     'bg-teal-100   text-teal-700',
-  Property: 'bg-orange-100 text-orange-700',
+  Shares:   'bg-blue-100   text-blue-700   dark:bg-blue-900/30   dark:text-blue-400',
+  Gold:     'bg-amber-100  text-amber-700  dark:bg-amber-900/30  dark:text-amber-400',
+  Crypto:   'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+  Bond:     'bg-teal-100   text-teal-700   dark:bg-teal-900/30   dark:text-teal-400',
+  Property: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
 };
 
 const ASSET_SECTION_BORDER: Record<Trade['assetType'], string> = {
-  Shares:   'border-blue-100   bg-blue-50',
-  Gold:     'border-amber-100  bg-amber-50',
-  Crypto:   'border-purple-100 bg-purple-50',
-  Bond:     'border-teal-100   bg-teal-50',
-  Property: 'border-orange-100 bg-orange-50',
+  Shares:   'border-blue-100   bg-blue-50   dark:border-blue-900   dark:bg-blue-950/30',
+  Gold:     'border-amber-100  bg-amber-50  dark:border-amber-900  dark:bg-amber-950/30',
+  Crypto:   'border-purple-100 bg-purple-50 dark:border-purple-900 dark:bg-purple-950/30',
+  Bond:     'border-teal-100   bg-teal-50   dark:border-teal-900   dark:bg-teal-950/30',
+  Property: 'border-orange-100 bg-orange-50 dark:border-orange-900 dark:bg-orange-950/30',
 };
 
 const BROKERAGE_DIVIDER: Record<'Shares' | 'Crypto', string> = {
-  Shares: 'border-blue-200',
-  Crypto: 'border-purple-200',
+  Shares: 'border-blue-200   dark:border-blue-800',
+  Crypto: 'border-purple-200 dark:border-purple-800',
 };
 
 // ── Main component ─────────────────────────────────────────────────────
 interface EditTradeModalProps {
   trade: Trade;
+  portfolios: Portfolio[];
   onClose: () => void;
   onSaved: (updated: Trade) => void;
 }
 
-export function EditTradeModal({ trade, onClose, onSaved }: EditTradeModalProps) {
+export function EditTradeModal({ trade, portfolios, onClose, onSaved }: EditTradeModalProps) {
   const { token, homeCurrency } = useAuth();
   const today = new Date().toISOString().split('T')[0];
   const isPropertyBuy = trade.assetType === 'Property' && trade.tradeType === 'Buy';
@@ -214,9 +227,19 @@ export function EditTradeModal({ trade, onClose, onSaved }: EditTradeModalProps)
   } = useForm<EditFormValues>({ defaultValues: buildDefaultValues(trade) });
 
   const isForeignTrade    = useWatch({ control, name: 'isForeignTrade' }) ?? false;
-  const currency          = useWatch({ control, name: 'currency' }) ?? '';
+  const exchangeValue     = useWatch({ control, name: 'exchange' });
   const pricePerUnitRaw   = useWatch({ control, name: 'pricePerUnit' });
   const numberOfUnitsRaw  = useWatch({ control, name: 'numberOfUnits' });
+
+  const exchangeDerivedCurrency = trade.assetType === 'Shares'
+    ? (exchangeValue ? (EXCHANGE_CURRENCY_MAP[exchangeValue] ?? null) : null)
+    : null;
+
+  useEffect(() => {
+    if (trade.assetType === 'Shares' && exchangeDerivedCurrency) {
+      setValue('currency', exchangeDerivedCurrency);
+    }
+  }, [exchangeDerivedCurrency, trade.assetType, setValue]);
 
   const tradeTotal = useMemo(() => {
     const p = parseFloat(pricePerUnitRaw ?? '');
@@ -245,21 +268,29 @@ export function EditTradeModal({ trade, onClose, onSaved }: EditTradeModalProps)
       dateOfTrade:   data.dateOfTrade,
       currency:      data.isForeignTrade ? data.currency : (homeCurrency ?? 'AUD'),
       isForeignTrade: data.isForeignTrade,
-      exchangeRate:  data.isForeignTrade ? parseFloat(data.exchangeRate) : null,
+      exchangeRate:  data.isForeignTrade
+        ? (parseFloat(data.pricePerUnit) * numberOfUnits + (brokerageFees ?? 0)) / parseFloat(data.totalCostHome)
+        : null,
+      totalCostHome: data.isForeignTrade ? parseFloat(data.totalCostHome) : null,
+      portfolioId:   data.portfolioId || null,
     };
 
     try {
       let updated: Trade;
 
       switch (trade.assetType) {
-        case 'Shares':
+        case 'Shares': {
+          const exchange = (data.exchange ?? trade.exchange) as Exchange;
+          const derivedCurrency = EXCHANGE_CURRENCY_MAP[exchange];
           updated = await tradesApi.updateShares(trade.id, {
             ...common,
-            ticker:        (data.ticker ?? trade.ticker).toUpperCase(),
-            exchange:      (data.exchange ?? trade.exchange) as Exchange,
+            currency: derivedCurrency ?? common.currency,
+            ticker:   (data.ticker ?? trade.ticker).toUpperCase(),
+            exchange,
             brokerageFees,
           }, token!);
           break;
+        }
 
         case 'Gold':
           updated = await tradesApi.updateGold(trade.id, {
@@ -318,15 +349,15 @@ export function EditTradeModal({ trade, onClose, onSaved }: EditTradeModalProps)
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       {/* Panel */}
-      <div className="relative mb-10 w-full max-w-2xl rounded-xl bg-white shadow-2xl">
+      <div className="relative mb-10 w-full max-w-2xl rounded-xl bg-white dark:bg-zinc-900 shadow-2xl">
 
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-6 py-4">
           <div className="flex items-center gap-3">
             <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${ASSET_BADGE[trade.assetType]}`}>
               {trade.assetType}
             </span>
-            <h2 className="text-lg font-semibold text-gray-900">Edit Trade</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Edit Trade</h2>
             <span className={`text-sm font-medium ${trade.tradeType === 'Buy' ? 'text-green-700' : 'text-red-600'}`}>
               ({trade.tradeType})
             </span>
@@ -334,7 +365,7 @@ export function EditTradeModal({ trade, onClose, onSaved }: EditTradeModalProps)
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            className="rounded-md p-1 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-zinc-800 hover:text-gray-600 dark:hover:text-gray-300"
             aria-label="Close"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -346,7 +377,7 @@ export function EditTradeModal({ trade, onClose, onSaved }: EditTradeModalProps)
         {/* Form */}
         <form onSubmit={handleSubmit(onSubmit)} className="px-6 py-5 space-y-5">
           {(errors as Record<string, { message?: string }>).root && (
-            <div className="rounded-md bg-red-50 p-3">
+            <div className="rounded-md bg-red-50 dark:bg-red-950 p-3">
               <FormError message={(errors as Record<string, { message?: string }>).root.message!} />
             </div>
           )}
@@ -365,6 +396,19 @@ export function EditTradeModal({ trade, onClose, onSaved }: EditTradeModalProps)
             />
             {errors.dateOfTrade && <FormError message={errors.dateOfTrade.message!} />}
           </div>
+
+          {/* Portfolio */}
+          {portfolios.length > 0 && (
+            <div className="max-w-xs">
+              <Label htmlFor="edit-portfolioId">Portfolio</Label>
+              <Select id="edit-portfolioId" {...register('portfolioId')}>
+                <option value="">No portfolio</option>
+                {portfolios.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </Select>
+            </div>
+          )}
 
           {/* Price + Units */}
           <div className={`grid gap-5 ${isPropertyBuy ? 'sm:grid-cols-1' : 'sm:grid-cols-2'}`}>
@@ -429,6 +473,14 @@ export function EditTradeModal({ trade, onClose, onSaved }: EditTradeModalProps)
                   </Select>
                   {errors.exchange && <FormError message={errors.exchange.message!} />}
                 </div>
+                {exchangeDerivedCurrency && (
+                  <div>
+                    <Label htmlFor="edit-currency-preview">Currency</Label>
+                    <Select id="edit-currency-preview" value={exchangeDerivedCurrency} disabled>
+                      <option value={exchangeDerivedCurrency}>{exchangeDerivedCurrency}</option>
+                    </Select>
+                  </div>
+                )}
               </div>
               <div className={`mt-4 pt-4 border-t ${BROKERAGE_DIVIDER['Shares']}`}>
                 <BrokerageFeeSection
@@ -565,42 +617,44 @@ export function EditTradeModal({ trade, onClose, onSaved }: EditTradeModalProps)
               <input
                 id="edit-isForeignTrade"
                 type="checkbox"
-                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-zinc-900 text-indigo-600 focus:ring-indigo-500"
                 {...register('isForeignTrade')}
               />
               <Label htmlFor="edit-isForeignTrade" className="mb-0">Foreign trade</Label>
             </div>
             {isForeignTrade && (
               <div className="grid gap-5 sm:grid-cols-2">
+                {!exchangeDerivedCurrency && (
+                  <div className="max-w-xs">
+                    <Label htmlFor="edit-currency">Currency</Label>
+                    <Select id="edit-currency" {...register('currency', { required: 'Currency is required.' })}>
+                      <option value="">Select currency…</option>
+                      {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </Select>
+                    {errors.currency && <FormError message={errors.currency.message!} />}
+                  </div>
+                )}
                 <div className="max-w-xs">
-                  <Label htmlFor="edit-currency">Currency</Label>
-                  <Select id="edit-currency" {...register('currency', { required: 'Currency is required.' })}>
-                    <option value="">Select currency…</option>
-                    {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
-                  </Select>
-                  {errors.currency && <FormError message={errors.currency.message!} />}
-                </div>
-                <div className="max-w-xs">
-                  <Label htmlFor="edit-exchangeRate">Exchange rate (1 AUD = X {currency})</Label>
+                  <Label htmlFor="edit-totalCostHome">Total cost ({homeCurrency ?? 'AUD'})</Label>
                   <Input
-                    id="edit-exchangeRate"
+                    id="edit-totalCostHome"
                     type="number"
-                    step="0.000001"
+                    step="0.01"
                     min="0"
-                    placeholder="e.g. 0.6400"
-                    {...register('exchangeRate', {
-                      required: 'Exchange rate is required for foreign trades.',
-                      validate: v => parseFloat(v) > 0 || 'Exchange rate must be greater than zero.',
+                    placeholder="0.00"
+                    {...register('totalCostHome', {
+                      required: 'Total cost is required for foreign trades.',
+                      validate: v => parseFloat(v) > 0 || 'Total cost must be greater than zero.',
                     })}
                   />
-                  {errors.exchangeRate && <FormError message={errors.exchangeRate.message!} />}
+                  {errors.totalCostHome && <FormError message={errors.totalCostHome.message!} />}
                 </div>
               </div>
             )}
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 pt-2 border-t border-gray-100">
+          <div className="flex gap-3 pt-2 border-t border-gray-100 dark:border-gray-700">
             <Button type="submit" isLoading={isSubmitting}>Save changes</Button>
             <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
           </div>

@@ -17,8 +17,10 @@ public record SharesTradeDto(
     bool IsForeignTrade,
     bool ExchangeRateApplied,
     decimal? ExchangeRate,
-    decimal? BrokerageFees)
-    : TradeDto(Id, PricePerUnit, NumberOfUnits, NumberOfUnitsSold, TotalValue, TradeType, DateOfTrade, CreatedAt, Currency, IsForeignTrade, ExchangeRateApplied, ExchangeRate)
+    decimal? BrokerageFees,
+    decimal? TotalCostHome,
+    Guid? PortfolioId)
+    : TradeDto(Id, PricePerUnit, NumberOfUnits, NumberOfUnitsSold, TotalValue, TradeType, DateOfTrade, CreatedAt, Currency, IsForeignTrade, ExchangeRateApplied, ExchangeRate, TotalCostHome, PortfolioId)
 {
     public static SharesTradeDto FromDomain(SharesTrade trade) => new(
         trade.Id,
@@ -35,6 +37,8 @@ public record SharesTradeDto(
         trade.IsForeignTrade,
         trade.ExchangeRateApplied,
         trade.ExchangeRate,
-        trade.BrokerageFees
+        trade.BrokerageFees,
+        trade.TotalCostHome,
+        trade.PortfolioId
     );
 }

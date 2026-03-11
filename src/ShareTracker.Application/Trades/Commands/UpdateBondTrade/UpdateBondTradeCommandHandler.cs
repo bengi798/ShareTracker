@@ -50,8 +50,10 @@ public class UpdateBondTradeCommandHandler : IRequestHandler<UpdateBondTradeComm
             issuer:         request.Issuer,
             currency:       currency,
             isForeignTrade: request.IsForeignTrade,
-            exchangeRate:   request.ExchangeRate);
+            exchangeRate:   request.ExchangeRate,
+            totalCostHome:  request.TotalCostHome);
 
+        bondTrade.SetPortfolio(request.PortfolioId);
         await _uow.SaveChangesAsync(cancellationToken);
 
         return TradeDto.FromDomain(bondTrade);

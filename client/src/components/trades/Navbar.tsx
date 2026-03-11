@@ -29,7 +29,7 @@ export function Navbar() {
   return (
     <>
       <header className="border-b border-gray-900 dark:border-gray-500 bg-[#f5f5f3] dark:bg-[#111111]">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-6">
             <Link href="/" className="text-xl font-bold tracking-tight text-black dark:text-white">
               ShareTracker

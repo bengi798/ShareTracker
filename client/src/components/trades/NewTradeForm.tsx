@@ -11,7 +11,7 @@ import {
   ASSET_TYPES, TRADE_TYPES, EXCHANGES, WEIGHT_UNITS, PROPERTY_TYPES, VALID_PURITY_CARATS, CURRENCIES
 } from '@/lib/types';
 import type {
-  AssetType, TradeType, Exchange, WeightUnit, PropertyType, ApiValidationError,
+  AssetType, TradeType, Exchange, WeightUnit, PropertyType, ApiValidationError, Portfolio,
 } from '@/lib/types';
 import { computePositions } from '@/lib/positions';
 import type { AllPositions } from '@/lib/positions';
@@ -22,17 +22,39 @@ import { Select } from '@/components/ui/Select';
 import { FormError } from '@/components/ui/FormError';
 import { Spinner } from '@/components/ui/Spinner';
 
+// ── Exchange → currency mapping ──────────────────────────────────────
+const EXCHANGE_CURRENCY_MAP: Partial<Record<Exchange, string>> = {
+  NYSE:   'USD',
+  NASDAQ: 'USD',
+  ASX:    'AUD',
+  LSE:    'GBP',
+  TSX:    'CAD',
+};
+
 // ── Style constants ──────────────────────────────────────────────────
 const WEIGHT_UNIT_LABELS: Record<WeightUnit, string> = {
   Grams: 'Grams', TroyOunces: 'Troy Ounces', Tolas: 'Tolas',
 };
 
 const ASSET_TAB_ACTIVE: Record<AssetType, string> = {
-  Shares: 'bg-blue-600   text-white border-blue-600',
-  Gold: 'bg-amber-500  text-white border-amber-500',
-  Crypto: 'bg-purple-600 text-white border-purple-600',
-  Bond: 'bg-teal-600   text-white border-teal-600',
+  Shares:   'bg-blue-600   text-white border-blue-600',
+  Gold:     'bg-amber-500  text-white border-amber-500',
+  Crypto:   'bg-purple-600 text-white border-purple-600',
+  Bond:     'bg-teal-600   text-white border-teal-600',
   Property: 'bg-orange-500 text-white border-orange-500',
+};
+
+const ASSET_SECTION_BG: Record<AssetType, string> = {
+  Shares:   'border-blue-100   bg-blue-50   dark:border-blue-900   dark:bg-blue-950/30',
+  Gold:     'border-amber-100  bg-amber-50  dark:border-amber-900  dark:bg-amber-950/30',
+  Crypto:   'border-purple-100 bg-purple-50 dark:border-purple-900 dark:bg-purple-950/30',
+  Bond:     'border-teal-100   bg-teal-50   dark:border-teal-900   dark:bg-teal-950/30',
+  Property: 'border-orange-100 bg-orange-50 dark:border-orange-900 dark:bg-orange-950/30',
+};
+
+const BROKERAGE_DIVIDER: Record<'Shares' | 'Crypto', string> = {
+  Shares: 'border-blue-200   dark:border-blue-800',
+  Crypto: 'border-purple-200 dark:border-purple-800',
 };
 
 // ── Form types ───────────────────────────────────────────────────────
@@ -41,12 +63,13 @@ type BrokerageFeeMode = 'dollar' | 'percent';
 type FormValues = {
   assetType: AssetType;
   tradeType: TradeType;
+  portfolioId?: string;
   pricePerUnit: string;
   numberOfUnits: string;
   dateOfTrade: string;
   currency: string;
   isForeignTrade: boolean;
-  exchangeRate: string;
+  totalCostHome: string;
   // Shares
   ticker?: string;
   exchange?: Exchange;
@@ -100,18 +123,18 @@ function BrokerageFeeSection({
         <Label className="mb-0">
           Brokerage fee <span className="font-normal text-gray-400">(optional)</span>
         </Label>
-        <div className="flex rounded border border-gray-300 overflow-hidden text-xs font-medium">
+        <div className="flex rounded border border-gray-300 dark:border-gray-600 overflow-hidden text-xs font-medium">
           <button
             type="button"
             onClick={() => { setValue('brokerageFeeMode', 'dollar'); setValue('brokerageFeePercent', ''); }}
-            className={`px-3 py-1 transition-colors ${mode === 'dollar' ? 'bg-gray-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+            className={`px-3 py-1 transition-colors ${mode === 'dollar' ? 'bg-gray-700 text-white' : 'bg-white dark:bg-zinc-900 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-800'}`}
           >
             $ Dollar
           </button>
           <button
             type="button"
             onClick={() => { setValue('brokerageFeeMode', 'percent'); setValue('brokerageFeeDollar', ''); }}
-            className={`px-3 py-1 border-l border-gray-300 transition-colors ${mode === 'percent' ? 'bg-gray-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+            className={`px-3 py-1 border-l border-gray-300 dark:border-gray-600 transition-colors ${mode === 'percent' ? 'bg-gray-700 text-white' : 'bg-white dark:bg-zinc-900 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-800'}`}
           >
             % Percent
           </button>
@@ -145,7 +168,7 @@ function BrokerageFeeSection({
           />
           {errors.brokerageFeePercent && <FormError message={errors.brokerageFeePercent.message!} />}
           {calculatedDollar !== null && (
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               ≈ ${calculatedDollar.toFixed(2)} brokerage
             </p>
           )}
@@ -155,10 +178,22 @@ function BrokerageFeeSection({
   );
 }
 
-export function NewTradeForm() {
+export function NewTradeForm({
+  portfolios: initialPortfolios,
+  onCreatePortfolio,
+}: {
+  portfolios: Portfolio[];
+  onCreatePortfolio: (name: string) => Promise<Portfolio>;
+}) {
   const { token, homeCurrency } = useAuth();
   const router = useRouter();
   const today = new Date().toISOString().split('T')[0];
+
+  // ── Portfolio state ───────────────────────────────────────────────
+  const [portfolios, setPortfolios] = useState<Portfolio[]>(initialPortfolios);
+  const [showNewPortfolioInput, setShowNewPortfolioInput] = useState(false);
+  const [newPortfolioName, setNewPortfolioName] = useState('');
+  const [creatingPortfolio, setCreatingPortfolio] = useState(false);
 
   // ── Positions state ──────────────────────────────────────────────
   const [positions, setPositions] = useState<AllPositions | null>(null);
@@ -189,7 +224,7 @@ export function NewTradeForm() {
       tradeType: 'Buy',
       dateOfTrade: today,
       isForeignTrade: false,
-      exchangeRate: '',
+      totalCostHome: '',
       brokerageFeeMode: 'dollar',
     },
   });
@@ -197,9 +232,18 @@ export function NewTradeForm() {
   const assetType = useWatch({ control, name: 'assetType' }) ?? 'Shares';
   const tradeType = useWatch({ control, name: 'tradeType' }) ?? 'Buy';
   const isForeignTrade = useWatch({ control, name: 'isForeignTrade' }) ?? false;
-  const currency = useWatch({ control, name: 'currency' }) ?? 'AUD';
+  const exchangeValue = useWatch({ control, name: 'exchange' });
   const pricePerUnitRaw = useWatch({ control, name: 'pricePerUnit' });
   const numberOfUnitsRaw = useWatch({ control, name: 'numberOfUnits' });
+
+  const exchangeDerivedCurrency = exchangeValue ? (EXCHANGE_CURRENCY_MAP[exchangeValue] ?? null) : null;
+
+  // Auto-populate currency when exchange changes (Shares)
+  useEffect(() => {
+    if (assetType === 'Shares' && exchangeDerivedCurrency) {
+      setValue('currency', exchangeDerivedCurrency);
+    }
+  }, [exchangeDerivedCurrency, assetType, setValue]);
 
   const isSell = tradeType === 'Sell';
   const isPropertyBuy = assetType === 'Property' && !isSell;
@@ -216,6 +260,21 @@ export function NewTradeForm() {
   useEffect(() => {
     setSelectedPositionKey('');
   }, [assetType, tradeType]);
+
+  // ── Inline portfolio creation ─────────────────────────────────────
+  const handleCreatePortfolio = async () => {
+    if (!newPortfolioName.trim()) return;
+    setCreatingPortfolio(true);
+    try {
+      const created = await onCreatePortfolio(newPortfolioName.trim());
+      setPortfolios(prev => [...prev, created]);
+      setValue('portfolioId', created.id);
+      setNewPortfolioName('');
+      setShowNewPortfolioInput(false);
+    } finally {
+      setCreatingPortfolio(false);
+    }
+  };
 
   // ── Available positions for current asset type ───────────────────
   const availablePositions = useMemo((): Array<{ key: string; label: string; availableUnits: number }> => {
@@ -327,7 +386,11 @@ export function NewTradeForm() {
       dateOfTrade: data.dateOfTrade,
       currency: data.isForeignTrade ? data.currency : (homeCurrency ?? 'AUD'),
       isForeignTrade: data.isForeignTrade,
-      exchangeRate: data.isForeignTrade ? parseFloat(data.exchangeRate) : null,
+      exchangeRate: data.isForeignTrade
+        ? (parseFloat(data.pricePerUnit) * numberOfUnits + (brokerageFees ?? 0)) / parseFloat(data.totalCostHome)
+        : null,
+      totalCostHome: data.isForeignTrade ? parseFloat(data.totalCostHome) : null,
+      portfolioId: data.portfolioId || null,
     };
 
     try {
@@ -340,7 +403,12 @@ export function NewTradeForm() {
             : null;
           const ticker   = (sharesPos?.ticker  ?? data.ticker!).toUpperCase();
           const exchange = (sharesPos?.exchange ?? data.exchange!) as Exchange;
-          await tradesApi.createShares({ ...common, ticker, exchange, brokerageFees }, token!);
+          const derivedCurrency = EXCHANGE_CURRENCY_MAP[exchange];
+          await tradesApi.createShares({
+            ...common,
+            currency: derivedCurrency ?? common.currency,
+            ticker, exchange, brokerageFees,
+          }, token!);
           break;
         }
         case 'Gold': {
@@ -404,8 +472,56 @@ export function NewTradeForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {errors.root && (
-        <div className="rounded-md bg-red-50 p-3">
+        <div className="rounded-md bg-red-50 dark:bg-red-950 p-3">
           <FormError message={errors.root.message!} />
+        </div>
+      )}
+
+      {/* Portfolio selector */}
+      {portfolios.length > 0 && (
+        <div>
+          <Label>Portfolio</Label>
+          <div className="mt-1 flex items-center gap-2">
+            <div className="flex-1 max-w-xs">
+              <select
+                className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-zinc-900 text-gray-900 dark:text-white px-3 py-2 text-sm"
+                {...register('portfolioId')}
+              >
+                <option value="">No portfolio</option>
+                {portfolios.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+            <button
+              type="button"
+              title="Create new portfolio"
+              onClick={() => setShowNewPortfolioInput(v => !v)}
+              className="flex items-center justify-center w-8 h-8 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-zinc-900 text-gray-600 dark:text-gray-400 hover:border-gray-900 dark:hover:border-gray-100 hover:text-black dark:hover:text-white transition-colors text-lg font-light"
+            >
+              +
+            </button>
+          </div>
+          {showNewPortfolioInput && (
+            <div className="mt-2 flex items-center gap-2 max-w-xs">
+              <input
+                type="text"
+                value={newPortfolioName}
+                onChange={e => setNewPortfolioName(e.target.value)}
+                placeholder="Portfolio name…"
+                className="flex-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-zinc-900 text-gray-900 dark:text-white px-3 py-1.5 text-sm"
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCreatePortfolio(); } }}
+              />
+              <button
+                type="button"
+                disabled={creatingPortfolio || !newPortfolioName.trim()}
+                onClick={handleCreatePortfolio}
+                className="px-3 py-1.5 text-sm font-medium bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded disabled:opacity-50"
+              >
+                {creatingPortfolio ? '…' : 'Create'}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -420,7 +536,7 @@ export function NewTradeForm() {
               onClick={() => setValue('assetType', type)}
               className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${assetType === type
                   ? ASSET_TAB_ACTIVE[type]
-                  : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
+                  : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400 dark:border-gray-600 dark:bg-zinc-900 dark:text-gray-400 dark:hover:border-gray-400'
                 }`}
             >
               {type}
@@ -443,7 +559,7 @@ export function NewTradeForm() {
                   ? type === 'Buy'
                     ? 'bg-green-600 text-white border-green-600'
                     : 'bg-red-500 text-white border-red-500'
-                  : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
+                  : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400 dark:border-gray-600 dark:bg-zinc-900 dark:text-gray-400 dark:hover:border-gray-400'
                 }`}
             >
               {type}
@@ -514,35 +630,37 @@ export function NewTradeForm() {
               <input
                 id="isForeignTrade"
                 type="checkbox"
-                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-zinc-900 text-indigo-600 focus:ring-indigo-500"
                 {...register('isForeignTrade')}
               />
               <Label htmlFor="isForeignTrade" className="mb-0">Foreign trade</Label>
             </div>
             {isForeignTrade && (
               <div className="grid gap-5 sm:grid-cols-2">
+                {!exchangeDerivedCurrency && (
+                  <div className="max-w-xs">
+                    <Label htmlFor="currency">Currency</Label>
+                    <Select id="currency" {...register('currency', { required: 'Currency is required.' })}>
+                      <option value="">Select currency…</option>
+                      {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </Select>
+                    {errors.currency && <FormError message={errors.currency.message!} />}
+                  </div>
+                )}
                 <div className="max-w-xs">
-                  <Label htmlFor="currency">Currency</Label>
-                  <Select id="currency" {...register('currency', { required: 'Currency is required.' })}>
-                    <option value="">Select currency…</option>
-                    {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
-                  </Select>
-                  {errors.currency && <FormError message={errors.currency.message!} />}
-                </div>
-                <div className="max-w-xs">
-                  <Label htmlFor="exchangeRate">Exchange rate (1 AUD = X {currency})</Label>
+                  <Label htmlFor="totalCostHome">Total cost ({homeCurrency ?? 'AUD'})</Label>
                   <Input
-                    id="exchangeRate"
+                    id="totalCostHome"
                     type="number"
-                    step="0.000001"
+                    step="0.01"
                     min="0"
-                    placeholder="e.g. 0.6400"
-                    {...register('exchangeRate', {
-                      required: 'Exchange rate is required for foreign trades.',
-                      validate: v => parseFloat(v) > 0 || 'Exchange rate must be greater than zero.',
+                    placeholder="0.00"
+                    {...register('totalCostHome', {
+                      required: 'Total cost is required for foreign trades.',
+                      validate: v => parseFloat(v) > 0 || 'Total cost must be greater than zero.',
                     })}
                   />
-                  {errors.exchangeRate && <FormError message={errors.exchangeRate.message!} />}
+                  {errors.totalCostHome && <FormError message={errors.totalCostHome.message!} />}
                 </div>
               </div>
             )}
@@ -550,7 +668,7 @@ export function NewTradeForm() {
 
           {/* Asset-specific buy fields */}
           {assetType === 'Shares' && (
-            <div className="rounded-lg border border-blue-100 bg-blue-50 p-4">
+            <div className={`rounded-lg border p-4 ${ASSET_SECTION_BG['Shares']}`}>
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <div>
                   <Label htmlFor="ticker">Ticker symbol</Label>
@@ -573,8 +691,16 @@ export function NewTradeForm() {
                   </Select>
                   {errors.exchange && <FormError message={errors.exchange.message!} />}
                 </div>
+                {exchangeDerivedCurrency && (
+                  <div>
+                    <Label htmlFor="currency-preview">Currency</Label>
+                    <Select id="currency-preview" value={exchangeDerivedCurrency} disabled>
+                      <option value={exchangeDerivedCurrency}>{exchangeDerivedCurrency}</option>
+                    </Select>
+                  </div>
+                )}
               </div>
-              <div className="mt-4 pt-4 border-t border-blue-200">
+              <div className={`mt-4 pt-4 border-t ${BROKERAGE_DIVIDER['Shares']}`}>
                 <BrokerageFeeSection
                   register={register}
                   control={control}
@@ -587,7 +713,7 @@ export function NewTradeForm() {
           )}
 
           {assetType === 'Gold' && (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 rounded-lg border border-amber-100 bg-amber-50 p-4">
+            <div className={`grid grid-cols-1 gap-5 sm:grid-cols-2 rounded-lg border p-4 ${ASSET_SECTION_BG['Gold']}`}>
               <div>
                 <Label htmlFor="purityCarats">Purity (carats)</Label>
                 <Select id="purityCarats" {...register('purityCarats', { required: 'Purity is required.' })}>
@@ -608,7 +734,7 @@ export function NewTradeForm() {
           )}
 
           {assetType === 'Crypto' && (
-            <div className="rounded-lg border border-purple-100 bg-purple-50 p-4">
+            <div className={`rounded-lg border p-4 ${ASSET_SECTION_BG['Crypto']}`}>
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <div>
                   <Label htmlFor="coinSymbol">Coin symbol</Label>
@@ -629,7 +755,7 @@ export function NewTradeForm() {
                   <Input id="network" placeholder="e.g. Ethereum" {...register('network')} />
                 </div>
               </div>
-              <div className="mt-4 pt-4 border-t border-purple-200">
+              <div className={`mt-4 pt-4 border-t ${BROKERAGE_DIVIDER['Crypto']}`}>
                 <BrokerageFeeSection
                   register={register}
                   control={control}
@@ -642,7 +768,7 @@ export function NewTradeForm() {
           )}
 
           {assetType === 'Bond' && (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 rounded-lg border border-teal-100 bg-teal-50 p-4">
+            <div className={`grid grid-cols-1 gap-5 sm:grid-cols-2 rounded-lg border p-4 ${ASSET_SECTION_BG['Bond']}`}>
               <div>
                 <Label htmlFor="bondCode">Bond code</Label>
                 <Input
@@ -688,7 +814,7 @@ export function NewTradeForm() {
           )}
 
           {assetType === 'Property' && (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 rounded-lg border border-orange-100 bg-orange-50 p-4">
+            <div className={`grid grid-cols-1 gap-5 sm:grid-cols-2 rounded-lg border p-4 ${ASSET_SECTION_BG['Property']}`}>
               <div className="sm:col-span-2">
                 <Label htmlFor="address">Address</Label>
                 <Input
@@ -715,16 +841,16 @@ export function NewTradeForm() {
       {isSell && (
         <div className="space-y-5">
           {tradesLoading ? (
-            <div className="flex items-center gap-3 text-sm text-gray-500">
+            <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
               <Spinner />
               Loading your positions…
             </div>
           ) : availablePositions.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-gray-300 p-8 text-center">
-              <p className="text-sm text-gray-500">
+            <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-600 p-8 text-center">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 No {assetType.toLowerCase()} positions available to sell.
               </p>
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
                 Add a buy trade first to create a position.
               </p>
             </div>
@@ -797,7 +923,7 @@ export function NewTradeForm() {
                     <div>
                       <Label htmlFor="numberOfUnits">
                         Number of units{' '}
-                        <span className="font-normal text-gray-400">
+                        <span className="font-normal text-gray-400 dark:text-gray-500">
                           (max: {selectedAvailableUnits})
                         </span>
                       </Label>
@@ -823,7 +949,7 @@ export function NewTradeForm() {
 
                   {/* Brokerage — Shares and Crypto sell */}
                   {hasBrokerage && (
-                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-zinc-800 p-4">
                       <BrokerageFeeSection
                         register={register}
                         control={control}
@@ -840,35 +966,37 @@ export function NewTradeForm() {
                       <input
                         id="isForeignTradeSell"
                         type="checkbox"
-                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-zinc-900 text-indigo-600 focus:ring-indigo-500"
                         {...register('isForeignTrade')}
                       />
                       <Label htmlFor="isForeignTradeSell" className="mb-0">Foreign trade</Label>
                     </div>
                     {isForeignTrade && (
                       <div className="grid gap-5 sm:grid-cols-2">
+                        {!exchangeDerivedCurrency && (
+                          <div className="max-w-xs">
+                            <Label htmlFor="currencySell">Currency</Label>
+                            <Select id="currencySell" {...register('currency', { required: 'Currency is required.' })}>
+                              <option value="">Select currency…</option>
+                              {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+                            </Select>
+                            {errors.currency && <FormError message={errors.currency.message!} />}
+                          </div>
+                        )}
                         <div className="max-w-xs">
-                          <Label htmlFor="currencySell">Currency</Label>
-                          <Select id="currencySell" {...register('currency', { required: 'Currency is required.' })}>
-                            <option value="">Select currency…</option>
-                            {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
-                          </Select>
-                          {errors.currency && <FormError message={errors.currency.message!} />}
-                        </div>
-                        <div className="max-w-xs">
-                          <Label htmlFor="exchangeRateSell">Exchange rate (1 AUD = X {currency})</Label>
+                          <Label htmlFor="totalCostHomeSell">Total cost ({homeCurrency ?? 'AUD'})</Label>
                           <Input
-                            id="exchangeRateSell"
+                            id="totalCostHomeSell"
                             type="number"
-                            step="0.000001"
+                            step="0.01"
                             min="0"
-                            placeholder="e.g. 0.6400"
-                            {...register('exchangeRate', {
-                              required: 'Exchange rate is required for foreign trades.',
-                              validate: v => parseFloat(v) > 0 || 'Exchange rate must be greater than zero.',
+                            placeholder="0.00"
+                            {...register('totalCostHome', {
+                              required: 'Total cost is required for foreign trades.',
+                              validate: v => parseFloat(v) > 0 || 'Total cost must be greater than zero.',
                             })}
                           />
-                          {errors.exchangeRate && <FormError message={errors.exchangeRate.message!} />}
+                          {errors.totalCostHome && <FormError message={errors.totalCostHome.message!} />}
                         </div>
                       </div>
                     )}

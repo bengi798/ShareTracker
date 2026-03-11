@@ -21,7 +21,9 @@ public abstract record TradeDto(
     string Currency,
     bool IsForeignTrade,
     bool ExchangeRateApplied,
-    decimal? ExchangeRate)
+    decimal? ExchangeRate,
+    decimal? TotalCostHome,
+    Guid? PortfolioId)
 {
     public static TradeDto FromDomain(Trade trade) => trade switch
     {

@@ -14,4 +14,6 @@ public record CreateBondTradeCommand(
     string Issuer,
     string Currency,
     bool IsForeignTrade = false,
-    decimal? ExchangeRate = null) : IRequest<TradeDto>;
+    decimal? ExchangeRate = null,
+    decimal? TotalCostHome = null,
+    Guid? PortfolioId = null) : IRequest<TradeDto>;

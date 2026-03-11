@@ -49,8 +49,10 @@ public class UpdateCryptoTradeCommandHandler : IRequestHandler<UpdateCryptoTrade
             currency:       currency,
             isForeignTrade: request.IsForeignTrade,
             exchangeRate:   request.ExchangeRate,
-            brokerageFees:  request.BrokerageFees);
+            brokerageFees:  request.BrokerageFees,
+            totalCostHome:  request.TotalCostHome);
 
+        cryptoTrade.SetPortfolio(request.PortfolioId);
         await _uow.SaveChangesAsync(cancellationToken);
 
         return TradeDto.FromDomain(cryptoTrade);

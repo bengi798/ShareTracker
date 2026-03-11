@@ -48,6 +48,10 @@ public class TradeConfiguration : IEntityTypeConfiguration<Trade>
             .HasColumnType("numeric(18,6)")
             .IsRequired(false);
 
+        builder.Property(t => t.TotalCostHome)
+            .HasColumnType("numeric(18,4)")
+            .IsRequired(false);
+
         // TotalValue is a computed property — not stored in DB
         builder.Ignore(t => t.TotalValue);
 
@@ -56,5 +60,12 @@ public class TradeConfiguration : IEntityTypeConfiguration<Trade>
             .IsRequired();
 
         builder.HasIndex(t => t.UserId);
+
+        builder.Property(t => t.PortfolioId).IsRequired(false);
+        builder.HasOne<Portfolio>()
+            .WithMany()
+            .HasForeignKey(t => t.PortfolioId)
+            .OnDelete(DeleteBehavior.SetNull)
+            .IsRequired(false);
     }
 }

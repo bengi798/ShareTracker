@@ -15,8 +15,9 @@ public class SharesTrade : Trade
         string userId, decimal pricePerUnit, decimal numberOfUnits,
         DateOnly dateOfTrade, TradeType tradeType,
         TickerSymbol ticker, Exchange exchange, Currency currency,
-        bool isForeignTrade, decimal? exchangeRate, decimal? brokerageFees)
-        : base(userId, pricePerUnit, numberOfUnits, dateOfTrade, tradeType, currency, isForeignTrade, exchangeRate)
+        bool isForeignTrade, decimal? exchangeRate, decimal? brokerageFees,
+        decimal? totalCostHome = null)
+        : base(userId, pricePerUnit, numberOfUnits, dateOfTrade, tradeType, currency, isForeignTrade, exchangeRate, totalCostHome)
     {
         Ticker = ticker;
         Exchange = exchange;
@@ -32,12 +33,13 @@ public class SharesTrade : Trade
         Currency currency,
         bool isForeignTrade = false,
         decimal? exchangeRate = null,
-        decimal? brokerageFees = null)
+        decimal? brokerageFees = null,
+        decimal? totalCostHome = null)
     {
         if (brokerageFees.HasValue && brokerageFees.Value < 0)
             throw new ArgumentException("Brokerage fees cannot be negative.");
 
-        UpdateBase(pricePerUnit, numberOfUnits, dateOfTrade, currency, isForeignTrade, exchangeRate);
+        UpdateBase(pricePerUnit, numberOfUnits, dateOfTrade, currency, isForeignTrade, exchangeRate, totalCostHome);
         Ticker = TickerSymbol.Create(ticker);
         Exchange = exchange;
         BrokerageFees = brokerageFees;
@@ -54,13 +56,14 @@ public class SharesTrade : Trade
         Currency currency,
         bool isForeignTrade = false,
         decimal? exchangeRate = null,
-        decimal? brokerageFees = null)
+        decimal? brokerageFees = null,
+        decimal? totalCostHome = null)
     {
         if (brokerageFees.HasValue && brokerageFees.Value < 0)
             throw new ArgumentException("Brokerage fees cannot be negative.");
 
         return new SharesTrade(
             userId, pricePerUnit, numberOfUnits, dateOfTrade, tradeType,
-            TickerSymbol.Create(ticker), exchange, currency, isForeignTrade, exchangeRate, brokerageFees);
+            TickerSymbol.Create(ticker), exchange, currency, isForeignTrade, exchangeRate, brokerageFees, totalCostHome);
     }
 }

@@ -49,8 +49,10 @@ public class UpdateGoldTradeCommandHandler : IRequestHandler<UpdateGoldTradeComm
             weightUnit:     weightUnit,
             currency:       currency,
             isForeignTrade: request.IsForeignTrade,
-            exchangeRate:   request.ExchangeRate);
+            exchangeRate:   request.ExchangeRate,
+            totalCostHome:  request.TotalCostHome);
 
+        goldTrade.SetPortfolio(request.PortfolioId);
         await _uow.SaveChangesAsync(cancellationToken);
 
         return TradeDto.FromDomain(goldTrade);
