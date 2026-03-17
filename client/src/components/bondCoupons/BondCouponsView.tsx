@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { bondCouponsApi, type BondCouponPayment, type CreateBondCouponPaymentRequest } from '@/lib/api/bondCoupons';
-import type { Trade } from '@/lib/types';
+import type { Trade, BondTrade } from '@/lib/types';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
@@ -82,7 +82,7 @@ export function BondCouponsView({ trades }: { trades: Trade[] }) {
   };
 
   const getBondLabel = (bondTradeId: string) => {
-    const t = bondTrades.find(b => b.id === bondTradeId) as any;
+    const t = bondTrades.find(b => b.id === bondTradeId) as BondTrade | undefined;
     if (!t) return bondTradeId;
     return `${t.bondCode} · ${t.yieldPercent}% · ${t.issuer}`;
   };
